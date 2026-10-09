@@ -12,3 +12,4 @@ tzdata==2026.3
 python-dateutil
 psycopg2-binary
 dj-database-url
+gunicorn
