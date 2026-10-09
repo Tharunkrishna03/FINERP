@@ -15,7 +15,7 @@ except ImportError:
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security and debug settings. Production must provide an explicit secret key.
+# Security and debug settings. Production must provide explicit secrets and hosts.
 def env_flag(name: str, default: bool) -> bool:
     value = os.environ.get(name)
     if value is None:
@@ -32,17 +32,26 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS",
+        "127.0.0.1,localhost" if DEBUG else "",
+    ).split(",")
     if host.strip()
 ]
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is false.")
 
 SECURE_SSL_REDIRECT = env_flag("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
-SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_SECONDS = int(
+    os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000")
+)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
 SECURE_HSTS_PRELOAD = env_flag("DJANGO_SECURE_HSTS_PRELOAD", False)
 SESSION_COOKIE_SECURE = env_flag("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = env_flag("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
-if env_flag("DJANGO_TRUST_X_FORWARDED_PROTO", False):
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+if env_flag("DJANGO_TRUST_X_FORWARDED_PROTO", not DEBUG):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Application definition
@@ -62,6 +71,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -99,9 +109,9 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=600,
+            conn_max_age=60,
             conn_health_checks=True,
-            ssl_require=True
+            ssl_require=not DEBUG,
         )
     }
 elif POSTGRES_HOST:
@@ -119,13 +129,19 @@ elif POSTGRES_HOST:
         }
     }
 else:
-    # Default local fallback database
+    # SQLite is a convenient local development fallback. Render's filesystem is
+    # ephemeral, so production must use a managed PostgreSQL database.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+if not DEBUG and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    raise ImproperlyConfigured(
+        "Configure DATABASE_URL (PostgreSQL) for production; SQLite is only for local development."
+    )
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -150,23 +166,66 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# Email
-MAILERS = {
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', str(BASE_DIR / 'media')))
+
+# Production uploads must live in durable object storage. Render's local service
+# filesystem is ephemeral, so it must never be used for customer or profile media.
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '').strip()
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', '').strip()
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '').strip() or None
+if not DEBUG and not AWS_STORAGE_BUCKET_NAME:
+    raise ImproperlyConfigured(
+        "Set AWS_STORAGE_BUCKET_NAME for production media storage (S3-compatible)."
+    )
+if AWS_STORAGE_BUCKET_NAME:
+    if not AWS_S3_REGION_NAME:
+        raise ImproperlyConfigured("AWS_S3_REGION_NAME is required when S3 media storage is enabled.")
+
+    aws_access_key = os.environ.get('AWS_ACCESS_KEY_ID', '').strip()
+    aws_secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY', '').strip()
+    if not DEBUG and (not aws_access_key or not aws_secret_key):
+        raise ImproperlyConfigured(
+            "Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for production media storage."
+        )
+    if not DEBUG and AWS_S3_ENDPOINT_URL and not AWS_S3_ENDPOINT_URL.lower().startswith('https://'):
+        raise ImproperlyConfigured("AWS_S3_ENDPOINT_URL must use HTTPS in production.")
+
+    INSTALLED_APPS.append('storages')
+    media_storage_options = {
+        'bucket_name': AWS_STORAGE_BUCKET_NAME,
+        'region_name': AWS_S3_REGION_NAME,
+        'default_acl': None,
+        'querystring_auth': True,
+        'querystring_expire': int(os.environ.get('AWS_QUERYSTRING_EXPIRE', '3600')),
+        'file_overwrite': False,
+    }
+    if AWS_S3_ENDPOINT_URL:
+        media_storage_options['endpoint_url'] = AWS_S3_ENDPOINT_URL
+    addressing_style = os.environ.get('AWS_S3_ADDRESSING_STYLE', '').strip()
+    if addressing_style:
+        media_storage_options['addressing_style'] = addressing_style
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': media_storage_options,
+    }
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         "DJANGO_CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000",
+        "http://localhost:3000,http://127.0.0.1:3000" if DEBUG else "",
     ).split(",")
     if origin.strip()
 ]
@@ -175,6 +234,17 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_flag("DJANGO_EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", "")
 
 # REST Framework Configuration
 REST_FRAMEWORK = {

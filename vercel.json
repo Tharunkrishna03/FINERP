@@ -16,8 +16,8 @@
       "destination": "https://finerp-wpku.onrender.com/admin/:path*"
     },
     {
-      "source": "/media/:path*",
-      "destination": "https://finerp-wpku.onrender.com/media/:path*"
+      "source": "/static/:path*",
+      "destination": "https://finerp-wpku.onrender.com/static/:path*"
     },
     {
       "source": "/(.*)",

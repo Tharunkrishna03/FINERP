@@ -1,0 +1,27 @@
+# Python environments and generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Local or production data
+*.sqlite3
+backend/media/
+backend/staticfiles/
+
+# Next.js / Vercel output
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+frontend/.env*
+!frontend/.env.example
+frontend/django_error.html
+
+# Accidental Windows environment expansion artifacts
+**/%SystemDrive%/

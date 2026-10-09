@@ -1,6 +1,7 @@
 asgiref==3.12.1
 Django==5.2.17
 django-cors-headers==4.9.0
+django-storages[s3]>=1.14.6,<2
 djangorestframework==3.18.0
 djangorestframework_simplejwt==5.5.1
 pillow==12.3.0
@@ -13,3 +14,4 @@ python-dateutil
 psycopg2-binary
 dj-database-url
 gunicorn
+whitenoise>=6.9,<7
