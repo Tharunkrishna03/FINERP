@@ -9,6 +9,10 @@ from .models import Customer, CustomerTransaction, JewelDetail
 
 class CustomerTransactionApiTests(APITestCase):
     def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+        
         self.customer = Customer.objects.create(
             amount=Decimal('1000.00'),
             date='2026-08-25',

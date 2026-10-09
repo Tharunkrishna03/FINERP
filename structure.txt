@@ -1,0 +1,141 @@
+BACKEND
+ROOT
+  backend_tree.txt
+  db.sqlite3
+  error_log.html
+  manage.py
+  output.txt
+  requirements.txt
+  seed_data.py
+  seed_data_orm.py
+  test_api.py
+config
+  asgi.py
+  settings.py
+  urls.py
+  wsgi.py
+  __init__.py
+customers
+  admin.py
+  apps.py
+  models.py
+  serializers.py
+  services.py
+  tests.py
+  urls.py
+  views.py
+  __init__.py
+customers\migrations
+  0001_initial.py
+  0002_userprofile.py
+  0003_userprofile_ano_format_userprofile_sno_format.py
+  0004_customer_customer_id_no.py
+  0005_userprofile_customer_id_no_format.py
+  0006_customertransaction_jeweldetail.py
+  0007_customer_amount_paid_customer_interest_rate_and_more.py
+  __init__.py
+media
+media\customer_photos
+  WhatsApp_Image_2026-08-22_at_1.35.17_PM_1.jpeg
+media\profile_photos
+  test.gif
+
+FRONTEND
+ROOT
+  .gitignore
+  AGENTS.md
+  CLAUDE.md
+  components.json
+  eslint.config.mjs
+  eslint_out.json
+  eslint_report.json
+  fix-urls.js
+  get_lint.js
+  lint-utf8.txt
+  lint_errors.txt
+  next-env.d.ts
+  next.config.ts
+  out.txt
+  package-lock.json
+  package.json
+  postcss.config.mjs
+  README.md
+  read_report.js
+  tsconfig.json
+  tsconfig.tsbuildinfo
+app
+  favicon.ico
+  globals.css
+  layout.tsx
+  loading.tsx
+  not-found.tsx
+  page.tsx
+app\(dashboard)
+  layout.tsx
+app\(dashboard)\add-customer
+  page.tsx
+app\(dashboard)\customer-list
+  page.tsx
+app\(dashboard)\dashboard
+  page.tsx
+app\(dashboard)\monthly-collection
+  page.tsx
+app\(dashboard)\overall-collection
+  page.tsx
+app\(dashboard)\settings
+  page.tsx
+app\(dashboard)\today-collection
+  page.tsx
+app\(dashboard)\transaction
+  page.tsx
+app\(dashboard)\transaction\[id]
+  page.tsx
+components
+  DotGrid.css
+  DotGrid.jsx
+components\ui
+components\ui\Button
+  index.tsx
+components\ui\Loader
+  index.tsx
+  style.css
+components\ui\Modal
+  index.tsx
+components\ui\Table
+  index.tsx
+design-system
+features
+features\auth
+features\auth\components
+  LoginForm.tsx
+features\collections
+features\collections\components
+  MonthlyCollection.tsx
+  OverallCollection.tsx
+  TodayCollection.tsx
+features\customers
+features\customers\components
+  AddCustomerForm.tsx
+  CustomerList.tsx
+features\customers\hooks
+features\customers\services
+  customerService.ts
+features\customers\types
+  customer.types.ts
+features\dashboard
+features\dashboard\components
+  Dashboard.tsx
+features\settings
+features\settings\components
+  Settings.tsx
+features\transactions
+features\transactions\components
+  Transaction.tsx
+  TransactionPassbook.tsx
+public
+  page_not_found.svg
+services
+services\api
+  client.ts
+utils
+  errorUtils.ts

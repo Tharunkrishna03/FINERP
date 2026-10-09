@@ -1,6 +1,38 @@
+from django.conf import settings
 from django.db import models
 
+
+USER_MODULE_CHOICES = (
+    ("dashboard", "Dashboard"),
+    ("customers", "Customers"),
+    ("transactions", "Transactions"),
+    ("collections", "Collections"),
+    ("settings", "Settings"),
+)
+USER_MODULE_KEYS = tuple(key for key, _label in USER_MODULE_CHOICES)
+
+class CustomerProfile(models.Model):
+    """Identity and contact details shared by a customer's loan accounts."""
+    id = models.BigAutoField(primary_key=True)
+    customer_name = models.CharField(max_length=255)
+    guardian_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20)
+    customer_id_no = models.CharField(max_length=100, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.customer_name
+
 class Customer(models.Model):
+    profile = models.ForeignKey(
+        CustomerProfile,
+        on_delete=models.CASCADE,
+        related_name="accounts",
+        null=True,
+        blank=True,
+    )
     sno = models.CharField(max_length=50, blank=True, null=True)
     ano = models.CharField(max_length=50, blank=True, null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -26,6 +58,8 @@ class Customer(models.Model):
     total_interest = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_payable = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tenure_date_overrides = models.JSONField(default=dict, blank=True)
+    tenure_call_done = models.BooleanField(default=False)
     status = models.CharField(max_length=50, default='Active')
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -108,3 +142,15 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user_name
+
+
+class UserModuleAccess(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="module_access",
+    )
+    visible_modules = models.JSONField(default=list, blank=True)
+
+    def __str__(self):
+        return f"Module visibility for {self.user.username}"
