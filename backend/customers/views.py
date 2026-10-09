@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -17,6 +18,7 @@ from .models import (
     CustomerTransaction,
     Payment,
     UserModuleAccess,
+    UserAvatar,
     UserProfile,
 )
 from .serializers import (
@@ -25,6 +27,7 @@ from .serializers import (
     CustomerTransactionSerializer,
     JewelDetailSerializer,
     PaymentCreateSerializer,
+    UserAvatarSerializer,
     UserProfileSerializer,
 )
 from .services import CustomerService, AuthService
@@ -314,6 +317,9 @@ class UserProfileView(APIView):
         serializer = UserProfileSerializer(profile)
         data = dict(serializer.data)
         data["visible_modules"] = get_visible_modules(request.user)
+        data["is_superuser"] = request.user.is_superuser
+        avatar = UserAvatar.objects.filter(user=request.user).first()
+        data["profile_image"] = avatar.image.url if avatar and avatar.image else None
         if request.user and request.user.is_authenticated and request.user.username:
             data['user_name'] = request.user.username
             
@@ -350,6 +356,21 @@ class UserProfileView(APIView):
             data['next_customer_id_no'] = CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format)
             return Response(data)
         return Response(serializer.errors, status=400)
+
+
+class UserAvatarView(APIView):
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        serializer = UserAvatarSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        avatar, _ = UserAvatar.objects.get_or_create(user=request.user)
+        avatar.image = serializer.validated_data["image"]
+        avatar.save(update_fields=["image"])
+        return Response({"profile_image": avatar.image.url})
 
 class ChangePasswordView(APIView):
     def post(self, request, *args, **kwargs):

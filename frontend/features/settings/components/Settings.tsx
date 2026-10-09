@@ -80,6 +80,7 @@ export default function Settings() {
           setAnoFormat(data.ano_format || "1");
           setCustomerIdNoFormat(data.customer_id_no_format || "1");
           setCurrentPhotoUrl(data.profile_image || "");
+          setIsSuperuser(Boolean(data.is_superuser));
         }
       } catch (err) {
         console.error("Failed to fetch profile", err instanceof Error ? err.message : String(err));
@@ -176,15 +177,36 @@ export default function Settings() {
     setLoading(true);
 
     try {
+      if (photo) {
+        const avatarData = new FormData();
+        avatarData.append("image", photo);
+
+        const avatarResponse = await fetchApi("/api/profile/avatar/", {
+          method: "POST",
+          body: avatarData,
+        });
+
+        if (!avatarResponse.ok) {
+          toast.warning("Unable to update the profile image. Try again.");
+          return;
+        }
+
+        const avatar = await avatarResponse.json();
+        setCurrentPhotoUrl(avatar.profile_image || "");
+      }
+
+      if (!isSuperuser && photo) {
+        toast.success("Profile image updated successfully!");
+        setTimeout(() => window.location.reload(), 1000);
+        return;
+      }
+
       const formData = new FormData();
       formData.append("user_name", userName);
       formData.append("role", role);
       formData.append("sno_format", snoFormat);
       formData.append("ano_format", anoFormat);
       formData.append("customer_id_no_format", customerIdNoFormat);
-      if (photo) {
-        formData.append("profile_image", photo);
-      }
 
       const response = await fetchApi("/api/profile/", {
         method: "PUT",

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ChangePasswordView, CreateUserView, CustomerListCreateView, CustomerProfileListCreateView, CustomerProfileRetrieveUpdateDestroyView, CustomerRetrieveUpdateDestroyView, CustomerTenureCallDoneAPIView, CustomerTransactionDestroyView, CustomerTransactionListCreateView, DeleteUserView, ListUsersView, UserProfileView, VerifyPasswordView, PaymentCreateAPIView
+from .views import ChangePasswordView, CreateUserView, CustomerListCreateView, CustomerProfileListCreateView, CustomerProfileRetrieveUpdateDestroyView, CustomerRetrieveUpdateDestroyView, CustomerTenureCallDoneAPIView, CustomerTransactionDestroyView, CustomerTransactionListCreateView, DeleteUserView, ListUsersView, UserAvatarView, UserProfileView, VerifyPasswordView, PaymentCreateAPIView
 
 urlpatterns = [
     path('customer-profiles', CustomerProfileListCreateView.as_view(), name='customer-profile-list-create'),
@@ -26,6 +26,7 @@ urlpatterns = [
     
     path('profile', UserProfileView.as_view(), name='user-profile'),
     path('profile/', UserProfileView.as_view(), name='user-profile-slash'),
+    path('profile/avatar/', UserAvatarView.as_view(), name='user-avatar'),
     
     path('change-password', ChangePasswordView.as_view(), name='change-password'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password-slash'),

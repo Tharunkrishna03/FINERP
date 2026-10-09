@@ -11,6 +11,7 @@ from .models import (
     Payment,
     CustomerProfile,
     UserProfile,
+    UserAvatar,
 )
 
 
@@ -226,4 +227,12 @@ class PaymentCreateSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = "__all__"
+        fields = ("id", "user_name", "role", "sno_format", "ano_format", "customer_id_no_format")
+
+
+class UserAvatarSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField()
+
+    class Meta:
+        model = UserAvatar
+        fields = ("image",)

@@ -144,6 +144,18 @@ class UserProfile(models.Model):
         return self.user_name
 
 
+class UserAvatar(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="avatar",
+    )
+    image = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
+
+    def __str__(self):
+        return f"Avatar for {self.user}"
+
+
 class UserModuleAccess(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
