@@ -17,6 +17,38 @@ interface AppUser {
   visible_modules: AppModuleKey[];
 }
 
+function getApiErrorMessage(value: unknown, fallback: string): string {
+  const extract = (item: unknown, depth = 0): string | null => {
+    if (depth > 5 || item == null) return null;
+    if (typeof item === "string") return item.trim() || null;
+    if (typeof item === "number" || typeof item === "boolean") return String(item);
+    if (Array.isArray(item)) {
+      const messages = item
+        .map((entry) => extract(entry, depth + 1))
+        .filter((message): message is string => Boolean(message));
+      return messages.length ? messages.join("; ") : null;
+    }
+    if (typeof item === "object") {
+      const record = item as Record<string, unknown>;
+      for (const key of ["error", "details", "detail", "non_field_errors", "message"]) {
+        const message = extract(record[key], depth + 1);
+        if (message) return message;
+      }
+      const fields = Object.entries(record)
+        .filter(([key]) => key !== "code" && key !== "success")
+        .map(([key, detail]) => {
+          const message = extract(detail, depth + 1);
+          return message ? `${key}: ${message}` : null;
+        })
+        .filter((message): message is string => Boolean(message));
+      return fields.length ? fields.join("; ") : null;
+    }
+    return null;
+  };
+
+  return extract(value) || fallback;
+}
+
 export default function Settings() {
   const [userName, setUserName] = useState("");
   const [role, setRole] = useState("Administrator");
@@ -127,7 +159,7 @@ export default function Settings() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (response.ok) {
         toast.success(data.message || "User created successfully!");
         setNewUsername("");
@@ -135,7 +167,10 @@ export default function Settings() {
         setNewUserModules([]);
         fetchUsers();
       } else {
-        toast.warning("Unable to create the user. Check the details and try again.");
+        const fallback = response.status >= 500
+          ? `Server error while creating the user (${response.status}).`
+          : "Unable to create the user.";
+        toast.warning(getApiErrorMessage(data, fallback));
       }
     } catch {
       toast.warning("Service is temporarily unavailable. Try again shortly.");
@@ -161,12 +196,15 @@ export default function Settings() {
         method: "DELETE",
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (response.ok) {
         toast.success(data.message || "User deleted successfully!");
         fetchUsers();
       } else {
-        toast.warning("Unable to delete the user. Try again.");
+        const fallback = response.status >= 500
+          ? `Server error while deleting the user (${response.status}).`
+          : "Unable to delete the user.";
+        toast.warning(getApiErrorMessage(data, fallback));
       }
     } catch {
       toast.warning("Service is temporarily unavailable. Try again shortly.");
