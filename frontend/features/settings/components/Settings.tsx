@@ -11,10 +11,12 @@ import { APP_MODULES, type AppModuleKey, getModuleLabel } from "@/services/modul
 interface AppUser {
   id: number;
   username: string;
+  role?: string;
   is_superuser: boolean;
   is_active: boolean;
   date_joined: string;
   visible_modules: AppModuleKey[];
+  profile_image?: string | null;
 }
 
 function getApiErrorMessage(value: unknown, fallback: string): string {
@@ -73,7 +75,12 @@ export default function Settings() {
   // User Management State
   const [newUsername, setNewUsername] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserModules, setNewUserModules] = useState<AppModuleKey[]>([]);
+  const [newUserRole, setNewUserRole] = useState("Staff");
+  const [newUserModules, setNewUserModules] = useState<AppModuleKey[]>([
+    "dashboard",
+    "customers",
+    "transactions",
+  ]);
   const [createUserLoading, setCreateUserLoading] = useState(false);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -81,6 +88,17 @@ export default function Settings() {
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "users">("profile");
+
+  const handleNewUserRoleChange = (roleVal: string) => {
+    setNewUserRole(roleVal);
+    if (roleVal === "Administrator") {
+      setNewUserModules(["dashboard", "customers", "transactions", "collections", "settings"]);
+    } else if (roleVal === "Manager") {
+      setNewUserModules(["dashboard", "customers", "transactions", "collections"]);
+    } else {
+      setNewUserModules(["dashboard", "customers", "transactions"]);
+    }
+  };
 
   const fetchUsers = useCallback(async (showLoading = true) => {
     if (showLoading) setUsersLoading(true);
@@ -155,6 +173,7 @@ export default function Settings() {
         body: JSON.stringify({
           username: newUsername.trim(),
           password: newUserPassword,
+          role: newUserRole,
           visible_modules: newUserModules,
         }),
       });
@@ -164,7 +183,8 @@ export default function Settings() {
         toast.success(data.message || "User created successfully!");
         setNewUsername("");
         setNewUserPassword("");
-        setNewUserModules([]);
+        setNewUserRole("Staff");
+        setNewUserModules(["dashboard", "customers", "transactions"]);
         fetchUsers();
       } else {
         const fallback = response.status >= 500
@@ -225,26 +245,25 @@ export default function Settings() {
         });
 
         if (!avatarResponse.ok) {
-          toast.warning("Unable to update the profile image. Try again.");
+          const errData = await avatarResponse.json().catch(() => null);
+          toast.warning(getApiErrorMessage(errData, "Unable to update the profile image. Try again."));
           return;
         }
 
         const avatar = await avatarResponse.json();
         setCurrentPhotoUrl(avatar.profile_image || "");
-      }
-
-      if (!isSuperuser && photo) {
-        toast.success("Profile image updated successfully!");
-        setTimeout(() => window.location.reload(), 1000);
-        return;
+        setPreviewUrl("");
+        setPhoto(null);
       }
 
       const formData = new FormData();
       formData.append("user_name", userName);
       formData.append("role", role);
-      formData.append("sno_format", snoFormat);
-      formData.append("ano_format", anoFormat);
-      formData.append("customer_id_no_format", customerIdNoFormat);
+      if (isSuperuser) {
+        formData.append("sno_format", snoFormat);
+        formData.append("ano_format", anoFormat);
+        formData.append("customer_id_no_format", customerIdNoFormat);
+      }
 
       const response = await fetchApi("/api/profile/", {
         method: "PUT",
@@ -252,11 +271,17 @@ export default function Settings() {
       });
 
       if (response.ok) {
-        await response.json();
+        const updated = await response.json();
+        setUserName(updated.user_name || userName);
+        setRole(updated.role || role);
+        if (updated.profile_image) {
+          setCurrentPhotoUrl(updated.profile_image);
+        }
         toast.success("Profile updated successfully!");
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.warning("Unable to update the profile. Check the details and try again.");
+        const errData = await response.json().catch(() => null);
+        toast.warning(getApiErrorMessage(errData, "Unable to update the profile. Check the details and try again."));
       }
     } catch {
       toast.warning("Service is temporarily unavailable. Try again shortly.");
@@ -536,54 +561,67 @@ export default function Settings() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Role</label>
                 <div className="input-wrap">
-                  <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+                  <select
+                    className="input"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    disabled={!isSuperuser}
+                    title={!isSuperuser ? "Role is assigned by Administrator" : undefined}
+                  >
                     <option value="Administrator">Administrator</option>
                     <option value="Manager">Manager</option>
                     <option value="Staff">Staff</option>
                   </select>
                 </div>
+                {!isSuperuser && (
+                  <span className="form-hint" style={{ fontSize: 11, color: "#64748b" }}>Role is managed by system administrators.</span>
+                )}
               </div>
             </div>
 
-            <div style={{ width: "100%", height: "1px", backgroundColor: "#e2e8f0", margin: "4px 0" }}></div>
+            {/* Auto Sequence Formats (Superuser Only) */}
+            {isSuperuser && (
+              <>
+                <div style={{ width: "100%", height: "1px", backgroundColor: "#e2e8f0", margin: "4px 0" }}></div>
 
-            {/* Auto Sequence Formats */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: "#2563eb" }}>
-                  <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                  <line x1="9" y1="20" x2="15" y2="20"></line>
-                  <line x1="12" y1="4" x2="12" y2="20"></line>
-                </svg>
-                <h4 style={{ margin: 0, color: "#1e293b", fontSize: "15px", fontWeight: 600 }}>Auto-Sequence Formats</h4>
-              </div>
-              <p style={{ margin: "0 0 16px 0", color: "#64748b", fontSize: "13px" }}>
-                Define the next automatic format values for Serial Numbers (S.No), Application Numbers (A.No), and Customer IDs.
-              </p>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: "#2563eb" }}>
+                      <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                      <line x1="9" y1="20" x2="15" y2="20"></line>
+                      <line x1="12" y1="4" x2="12" y2="20"></line>
+                    </svg>
+                    <h4 style={{ margin: 0, color: "#1e293b", fontSize: "15px", fontWeight: 600 }}>Auto-Sequence Formats</h4>
+                  </div>
+                  <p style={{ margin: "0 0 16px 0", color: "#64748b", fontSize: "13px" }}>
+                    Define the next automatic format values for Serial Numbers (S.No), Application Numbers (A.No), and Customer IDs.
+                  </p>
 
-              <div className="settings-form-row settings-form-row--three">
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="form-label">Next S.No Format</label>
-                  <div className="input-wrap">
-                    <input type="text" className="input" placeholder="e.g. 1 or SNO-1001" value={snoFormat} onChange={(e) => setSnoFormat(e.target.value)} />
+                  <div className="settings-form-row settings-form-row--three">
+                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label className="form-label">Next S.No Format</label>
+                      <div className="input-wrap">
+                        <input type="text" className="input" placeholder="e.g. 1 or SNO-1001" value={snoFormat} onChange={(e) => setSnoFormat(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label className="form-label">Next A.No Format</label>
+                      <div className="input-wrap">
+                        <input type="text" className="input" placeholder="e.g. 1 or ANO-1001" value={anoFormat} onChange={(e) => setAnoFormat(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label className="form-label">Next Customer ID</label>
+                      <div className="input-wrap">
+                        <input type="text" className="input" placeholder="e.g. 1 or CUST-1001" value={customerIdNoFormat} onChange={(e) => setCustomerIdNoFormat(e.target.value)} />
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="form-label">Next A.No Format</label>
-                  <div className="input-wrap">
-                    <input type="text" className="input" placeholder="e.g. 1 or ANO-1001" value={anoFormat} onChange={(e) => setAnoFormat(e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="form-label">Next Customer ID</label>
-                  <div className="input-wrap">
-                    <input type="text" className="input" placeholder="e.g. 1 or CUST-1001" value={customerIdNoFormat} onChange={(e) => setCustomerIdNoFormat(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
 
             <div className="settings-actions" style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
               <Button type="button" onClick={handleSave} disabled={loading} className="btn btn-primary transition-colors">
@@ -704,7 +742,7 @@ export default function Settings() {
               <h4 style={{ margin: "0 0 12px 0", fontSize: 15, fontWeight: 600, color: "#1e293b" }}>Create New User Account</h4>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div className="settings-form-row settings-form-row--two">
+                <div className="settings-form-row settings-form-row--three">
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                     <label className="form-label">Username</label>
                     <div className="input-wrap">
@@ -728,6 +766,21 @@ export default function Settings() {
                         value={newUserPassword}
                         onChange={(e) => setNewUserPassword(e.target.value)}
                       />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="form-label">Role</label>
+                    <div className="input-wrap">
+                      <select
+                        className="input"
+                        value={newUserRole}
+                        onChange={(e) => handleNewUserRoleChange(e.target.value)}
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Staff">Staff</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -779,7 +832,7 @@ export default function Settings() {
                   <table className="data-table" style={{ margin: 0 }}>
                     <thead>
                       <tr>
-                        <th>Username</th>
+                        <th>User</th>
                         <th>Role</th>
                         <th>Visible Modules</th>
                         <th>Joined Date</th>
@@ -787,51 +840,100 @@ export default function Settings() {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((user) => (
-                        <tr key={user.id}>
-                          <td style={{ fontWeight: 600, color: "#1e293b" }}>
-                            {user.username}
-                            {user.is_superuser && (
+                      {users.map((user) => {
+                        const userRole = user.role || (user.is_superuser ? "Administrator" : "Staff");
+                        return (
+                          <tr key={user.id}>
+                            <td style={{ fontWeight: 600, color: "#1e293b" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                {user.profile_image ? (
+                                  <img
+                                    src={user.profile_image}
+                                    alt={user.username}
+                                    style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 28,
+                                      height: 28,
+                                      borderRadius: "50%",
+                                      background: "#e2e8f0",
+                                      color: "#475569",
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    {(user.username.charAt(0) || "U").toUpperCase()}
+                                  </div>
+                                )}
+                                <span>{user.username}</span>
+                                {user.is_superuser && (
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      padding: "2px 8px",
+                                      backgroundColor: "#dbeafe",
+                                      color: "#1d4ed8",
+                                      borderRadius: "12px",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Super Admin
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
                               <span
                                 style={{
-                                  marginLeft: "8px",
-                                  fontSize: "11px",
-                                  padding: "2px 8px",
-                                  backgroundColor: "#dbeafe",
-                                  color: "#1d4ed8",
+                                  fontSize: "12px",
+                                  padding: "3px 10px",
                                   borderRadius: "12px",
                                   fontWeight: 600,
+                                  backgroundColor:
+                                    userRole === "Administrator"
+                                      ? "#eff6ff"
+                                      : userRole === "Manager"
+                                      ? "#fef3c7"
+                                      : "#f1f5f9",
+                                  color:
+                                    userRole === "Administrator"
+                                      ? "#1d4ed8"
+                                      : userRole === "Manager"
+                                      ? "#b45309"
+                                      : "#475569",
                                 }}
                               >
-                                Super Admin
+                                {userRole}
                               </span>
-                            )}
-                          </td>
-                          <td style={{ color: "#64748b" }}>
-                            {user.is_superuser ? "Administrator" : "User"}
-                          </td>
-                          <td style={{ color: "#64748b", minWidth: "180px" }}>
-                            {(user.visible_modules || []).map(getModuleLabel).join(", ") || "None"}
-                          </td>
-                          <td style={{ color: "#64748b" }}>
-                            {new Date(user.date_joined).toLocaleDateString()}
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            {!user.is_superuser ? (
-                              <Button
-                                type="button"
-                                onClick={() => handleDeleteUser(user.id, user.username)}
-                                className="btn btn-secondary"
-                                style={{ fontSize: "12px", padding: "4px 12px", color: "#dc2626" }}
-                              >
-                                Delete
-                              </Button>
-                            ) : (
-                              <span style={{ fontSize: "12px", color: "#94a3b8" }}>—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td style={{ color: "#64748b", minWidth: "180px" }}>
+                              {(user.visible_modules || []).map(getModuleLabel).join(", ") || "None"}
+                            </td>
+                            <td style={{ color: "#64748b" }}>
+                              {new Date(user.date_joined).toLocaleDateString()}
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              {!user.is_superuser ? (
+                                <Button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(user.id, user.username)}
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: "12px", padding: "4px 12px", color: "#dc2626" }}
+                                >
+                                  Delete
+                                </Button>
+                              ) : (
+                                <span style={{ fontSize: "12px", color: "#94a3b8" }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

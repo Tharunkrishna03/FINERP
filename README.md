@@ -6,12 +6,12 @@ Customer and jewel backed loan management with customer records, loan schedules,
 
 - Frontend: Next.js 16, React 19, TypeScript
 - Backend: Django 5.2, Django REST Framework, JWT authentication
-- Database: Supabase PostgreSQL through `DATABASE_URL`
-- Production media: private S3 compatible object storage with expiring signed URLs
+- Database: Supabase PostgreSQL through `DATABASE_URL` in local and production environments
+- Production media: private S3 compatible object storage with expiring signed URLs; local media uses the backend's `media` folder
 
 ## Run locally (PowerShell)
 
-From the repository root, install and start the backend:
+From the repository root, set `DATABASE_URL` to your Supabase PostgreSQL connection string in `backend/.env`, then install and start the backend:
 
 ```powershell
 cd backend
@@ -19,22 +19,22 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 $env:DJANGO_DEBUG = "true"
 $env:DJANGO_SECRET_KEY = (& .\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())").Trim()
-# Set DATABASE_URL to the Supabase PostgreSQL connection URI before running Django.
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py createsuperuser
 .\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
+The local backend and production backend both use Supabase. Run migrations only against the Supabase project you intend this app to use; `createsuperuser` creates a user in that same database.
+
 In another terminal, run the frontend:
 
 ```powershell
 cd frontend
-$env:BACKEND_URL = "http://127.0.0.1:8000"
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). `BACKEND_URL` is only used by the local Next.js server; deployed API routing is configured in the root `vercel.json`.
+Open [http://localhost:3000](http://localhost:3000). During `next dev`, API and media paths proxy to `http://127.0.0.1:8000` by default. Set `BACKEND_URL` to override that target. Production routing remains configured in the root `vercel.json`.
 
 ## Render backend
 
@@ -68,7 +68,7 @@ Use the repository root as the Vercel project root and set the framework to **Se
 
 ## Deployment notes
 
-- Startup requires a Supabase PostgreSQL `DATABASE_URL`; other database engines and non-Supabase PostgreSQL hosts are rejected. SSL is required for database connections.
+- Startup in both local and production environments requires a Supabase PostgreSQL `DATABASE_URL`; other database engines and non-Supabase PostgreSQL hosts are rejected. SSL is required for database connections.
 - Existing photo files must be copied to the configured bucket using the same relative names before production uses the existing database. Back up any files currently on Render before redeploying; Render service filesystems are ephemeral.
 - Configure `DJANGO_EMAIL_*` variables only if the application is set up to send email.
 - HSTS is enabled for one year in production. Subdomain coverage and preload remain disabled until separately reviewed.

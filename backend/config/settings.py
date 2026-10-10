@@ -101,7 +101,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Supabase PostgreSQL is the only supported application database.
+# Supabase PostgreSQL is the application database in local and production runs.
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 if not DATABASE_URL:
     raise ImproperlyConfigured("Set DATABASE_URL to the Supabase PostgreSQL connection URI.")

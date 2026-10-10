@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const backendUrl = (process.env.BACKEND_URL || "https://finerp-wpku.onrender.com").replace(/\/+$/, "");
+const defaultBackendUrl = process.env.NODE_ENV === "development"
+  ? "http://127.0.0.1:8000"
+  : "https://finerp-wpku.onrender.com";
+const backendUrl = (process.env.BACKEND_URL || defaultBackendUrl).replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,

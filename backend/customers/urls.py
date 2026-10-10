@@ -26,7 +26,8 @@ urlpatterns = [
     
     path('profile', UserProfileView.as_view(), name='user-profile'),
     path('profile/', UserProfileView.as_view(), name='user-profile-slash'),
-    path('profile/avatar/', UserAvatarView.as_view(), name='user-avatar'),
+    path('profile/avatar', UserAvatarView.as_view(), name='user-avatar'),
+    path('profile/avatar/', UserAvatarView.as_view(), name='user-avatar-slash'),
     
     path('change-password', ChangePasswordView.as_view(), name='change-password'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password-slash'),

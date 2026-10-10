@@ -20,6 +20,8 @@ from .models import (
     UserModuleAccess,
     UserAvatar,
     UserProfile,
+    get_user_role,
+    set_user_role,
 )
 from .serializers import (
     CustomerSerializer,
@@ -304,58 +306,94 @@ class UserProfileView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
-        profile, created = UserProfile.objects.get_or_create(id=1)
+        profile, _ = UserProfile.objects.get_or_create(id=1)
         return profile
 
     def get(self, request, *args, **kwargs):
         profile = self.get_object()
-        if request.user and request.user.is_authenticated and request.user.username:
-            if profile.user_name != request.user.username:
-                profile.user_name = request.user.username
-                profile.save(update_fields=["user_name"])
-                
-        serializer = UserProfileSerializer(profile)
-        data = dict(serializer.data)
-        data["visible_modules"] = get_visible_modules(request.user)
-        data["is_superuser"] = request.user.is_superuser
-        avatar = UserAvatar.objects.filter(user=request.user).first()
-        data["profile_image"] = avatar.image.url if avatar and avatar.image else None
-        if request.user and request.user.is_authenticated and request.user.username:
-            data['user_name'] = request.user.username
-            
-        data['next_sno'] = CustomerService.get_next_number("sno", profile.sno_format)
-        data['next_ano'] = CustomerService.get_next_number("ano", profile.ano_format)
-        data['next_customer_id_no'] = CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format)
+        user = request.user
         
+        avatar = UserAvatar.objects.filter(user=user).first() if (user and user.is_authenticated) else None
+        user_name = (
+            user.first_name if (user and user.is_authenticated and user.first_name)
+            else (user.username if (user and user.is_authenticated) else profile.user_name)
+        )
+        role = get_user_role(user)
+        is_superuser = bool(user and user.is_authenticated and user.is_superuser)
+        visible_modules = get_visible_modules(user) if (user and user.is_authenticated) else []
+
+        data = {
+            "id": profile.id,
+            "user_name": user_name,
+            "username": user.username if (user and user.is_authenticated) else "",
+            "role": role,
+            "profile_image": avatar.image.url if (avatar and avatar.image) else None,
+            "is_superuser": is_superuser,
+            "visible_modules": visible_modules,
+            "sno_format": profile.sno_format,
+            "ano_format": profile.ano_format,
+            "customer_id_no_format": profile.customer_id_no_format,
+            "next_sno": CustomerService.get_next_number("sno", profile.sno_format),
+            "next_ano": CustomerService.get_next_number("ano", profile.ano_format),
+            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format),
+        }
         return Response(data)
 
     def put(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
-            return Response({"error": "Only admin can update shared profile settings"}, status=403)
+        user = request.user
+        if not user or not user.is_authenticated:
+            return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
         profile = self.get_object()
-        
+
+        # 1. Update individual display name
         new_name = request.data.get("user_name")
-        if new_name and request.user and request.user.is_authenticated:
+        if new_name is not None:
             new_name = str(new_name).strip()
-            if new_name and new_name != request.user.username:
-                request.user.username = new_name
-                request.user.save(update_fields=["username"])
-                
-        serializer = UserProfileSerializer(profile, data=request.data, partial=True)
-        if serializer.is_valid():
-            profile_instance = serializer.save()
-            if request.user and request.user.is_authenticated and request.user.username:
-                profile_instance.user_name = request.user.username
-                profile_instance.save(update_fields=["user_name"])
-                
-            data = dict(serializer.data)
-            if request.user and request.user.is_authenticated and request.user.username:
-                data['user_name'] = request.user.username
-            data['next_sno'] = CustomerService.get_next_number("sno", profile.sno_format)
-            data['next_ano'] = CustomerService.get_next_number("ano", profile.ano_format)
-            data['next_customer_id_no'] = CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format)
-            return Response(data)
-        return Response(serializer.errors, status=400)
+            if new_name:
+                user.first_name = new_name
+                user.save(update_fields=["first_name"])
+
+        # 2. Update individual avatar if passed in PUT
+        uploaded_image = request.FILES.get("profile_image") or request.FILES.get("image")
+        if uploaded_image:
+            avatar, _ = UserAvatar.objects.get_or_create(user=user)
+            if avatar.image:
+                try:
+                    avatar.image.delete(save=False)
+                except Exception:
+                    pass
+            avatar.image = uploaded_image
+            avatar.save()
+
+        # 3. Role update (if provided)
+        role_val = request.data.get("role")
+        if role_val:
+            set_user_role(user, role_val)
+
+        # 4. System sequence formats (only admin can change these shared formats)
+        if user.is_superuser:
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+
+        avatar = UserAvatar.objects.filter(user=user).first()
+        data = {
+            "id": profile.id,
+            "user_name": user.first_name or user.username,
+            "username": user.username,
+            "role": get_user_role(user),
+            "profile_image": avatar.image.url if (avatar and avatar.image) else None,
+            "is_superuser": bool(user.is_superuser),
+            "visible_modules": get_visible_modules(user),
+            "sno_format": profile.sno_format,
+            "ano_format": profile.ano_format,
+            "customer_id_no_format": profile.customer_id_no_format,
+            "next_sno": CustomerService.get_next_number("sno", profile.sno_format),
+            "next_ano": CustomerService.get_next_number("ano", profile.ano_format),
+            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format),
+        }
+        return Response(data)
 
 
 class UserAvatarView(APIView):
@@ -368,9 +406,25 @@ class UserAvatarView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         avatar, _ = UserAvatar.objects.get_or_create(user=request.user)
+        if avatar.image:
+            try:
+                avatar.image.delete(save=False)
+            except Exception:
+                pass
         avatar.image = serializer.validated_data["image"]
-        avatar.save(update_fields=["image"])
+        avatar.save()
         return Response({"profile_image": avatar.image.url})
+
+    def delete(self, request, *args, **kwargs):
+        avatar = UserAvatar.objects.filter(user=request.user).first()
+        if avatar and avatar.image:
+            try:
+                avatar.image.delete(save=False)
+            except Exception:
+                pass
+            avatar.delete()
+        return Response({"profile_image": None, "message": "Avatar removed successfully"})
+
 
 class ChangePasswordView(APIView):
     def post(self, request, *args, **kwargs):
@@ -413,37 +467,46 @@ class CreateUserView(APIView):
         username_value = request.data.get("username", "")
         username = username_value.strip() if isinstance(username_value, str) else ""
         password = request.data.get("password", "")
+        role_value = request.data.get("role", "Staff")
+        role = role_value.strip() if isinstance(role_value, str) else "Staff"
+        if role not in ["Administrator", "Manager", "Staff"]:
+            role = "Staff"
+            
         visible_modules = request.data.get("visible_modules")
         
         if not username or not password:
             return Response({"error": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not isinstance(visible_modules, list):
+        if visible_modules is None:
+            if role.lower() == "administrator":
+                selected_modules = list(USER_MODULE_KEYS)
+            else:
+                selected_modules = ["dashboard", "customers", "transactions", "collections"]
+        elif not isinstance(visible_modules, list):
             return Response(
                 {"error": "Select the modules this user can see"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if not all(isinstance(module, str) for module in visible_modules):
-            return Response(
-                {"error": "One or more selected modules are invalid"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        selected_modules = list(dict.fromkeys(visible_modules))
-        invalid_modules = [
-            module for module in selected_modules if module not in USER_MODULE_KEYS
-        ]
-        if invalid_modules:
-            return Response(
-                {"error": "One or more selected modules are invalid"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if not selected_modules:
-            return Response(
-                {"error": "Select at least one module for this user"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        else:
+            if not all(isinstance(module, str) for module in visible_modules):
+                return Response(
+                    {"error": "One or more selected modules are invalid"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            selected_modules = list(dict.fromkeys(visible_modules))
+            invalid_modules = [
+                module for module in selected_modules if module not in USER_MODULE_KEYS
+            ]
+            if invalid_modules:
+                return Response(
+                    {"error": "One or more selected modules are invalid"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not selected_modules:
+                return Response(
+                    {"error": "Select at least one module for this user"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         
         if User.objects.filter(username=username).exists():
             return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
@@ -453,15 +516,25 @@ class CreateUserView(APIView):
         except DjangoValidationError as error:
             return Response({"error": list(error.messages)}, status=status.HTTP_400_BAD_REQUEST)
         
+        is_admin_role = (role.lower() == "administrator")
         with transaction.atomic():
-            user = User.objects.create_user(username=username, password=password)
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                is_staff=is_admin_role,
+                is_superuser=is_admin_role,
+            )
             UserModuleAccess.objects.create(
                 user=user,
                 visible_modules=selected_modules,
+                role=role,
             )
         return Response(
             {
                 "message": f"User '{user.username}' created successfully",
+                "id": user.id,
+                "username": user.username,
+                "role": role,
                 "visible_modules": selected_modules,
             },
             status=status.HTTP_201_CREATED,
@@ -476,14 +549,24 @@ class ListUsersView(APIView):
         access_by_user = dict(
             UserModuleAccess.objects.values_list("user_id", "visible_modules")
         )
-        users = User.objects.all()
+        role_by_user = dict(
+            UserModuleAccess.objects.values_list("user_id", "role")
+        )
+        avatars_by_user = {
+            a.user_id: a.image.url
+            for a in UserAvatar.objects.filter(image__isnull=False)
+            if a.image
+        }
+        users = User.objects.all().order_by("-date_joined")
         return Response([
             {
                 "id": user.id,
                 "username": user.username,
+                "role": "Administrator" if user.is_superuser else role_by_user.get(user.id, "Staff"),
                 "is_superuser": user.is_superuser,
                 "is_active": user.is_active,
                 "date_joined": user.date_joined,
+                "profile_image": avatars_by_user.get(user.id),
                 "visible_modules": (
                     list(USER_MODULE_KEYS)
                     if user.is_superuser

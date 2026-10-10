@@ -144,13 +144,17 @@ class UserProfile(models.Model):
         return self.user_name
 
 
+def user_avatar_upload_path(instance, filename):
+    return f"profile_photos/user_{instance.user_id}/{filename}"
+
+
 class UserAvatar(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="avatar",
     )
-    image = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
+    image = models.ImageField(upload_to=user_avatar_upload_path, blank=True, null=True)
 
     def __str__(self):
         return f"Avatar for {self.user}"
@@ -163,6 +167,35 @@ class UserModuleAccess(models.Model):
         related_name="module_access",
     )
     visible_modules = models.JSONField(default=list, blank=True)
+    role = models.CharField(max_length=50, default="Staff", blank=True)
 
     def __str__(self):
         return f"Module visibility for {self.user.username}"
+
+
+def get_user_role(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return "User"
+    if getattr(user, "is_superuser", False):
+        return "Administrator"
+    try:
+        access = getattr(user, "module_access", None)
+        if access and getattr(access, "role", None):
+            return access.role
+    except Exception:
+        pass
+    return "Staff"
+
+
+def set_user_role(user, role_name):
+    if not user or not getattr(user, "is_authenticated", False):
+        return
+    role_str = str(role_name).strip() if role_name else "Staff"
+    access, _ = UserModuleAccess.objects.get_or_create(user=user)
+    access.role = role_str
+    access.save(update_fields=["role"])
+    if role_str.lower() == "administrator":
+        if not user.is_staff:
+            user.is_staff = True
+            user.save(update_fields=["is_staff"])
+

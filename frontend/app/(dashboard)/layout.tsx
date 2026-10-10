@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const currentModule = moduleForPathname(pathname);
-  const currentModuleAllowed = !currentModule || profileData.visible_modules.includes(currentModule);
+  const currentModuleAllowed = !currentModule || pathname === "/settings" || profileData.visible_modules.includes(currentModule);
   const firstVisibleModule = APP_MODULES.find(({ key }) => profileData.visible_modules.includes(key));
 
   React.useEffect(() => {
@@ -256,17 +256,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             
             <div className={`dropdown-menu ${profileOpen ? 'is-open' : ''}`}>
+              <Link href="/settings" style={{ textDecoration: "none", color: "inherit" }} onClick={() => setProfileOpen(false)}>
+                <div className="dropdown-item">My Profile</div>
+              </Link>
               {profileData.visible_modules.includes("settings") && (
-                <>
-                  <Link href="/settings" style={{ textDecoration: "none", color: "inherit" }}>
-                    <div className="dropdown-item">My Profile</div>
-                  </Link>
-                  <Link href="/settings" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="dropdown-item">Settings</div>
-                  </Link>
-                </>
+                <Link href="/settings" style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setProfileOpen(false)}>
+                  <div className="dropdown-item">Settings</div>
+                </Link>
               )}
-              {profileData.visible_modules.includes("settings") && <div className="dropdown-divider"></div>}
+              <div className="dropdown-divider"></div>
               <Link href="/" onClick={handleSignOut} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="dropdown-item danger">Sign out</div>
               </Link>
