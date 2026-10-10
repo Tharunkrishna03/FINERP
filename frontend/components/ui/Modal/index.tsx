@@ -42,6 +42,7 @@ export function Modal({
 
   return (
     <div
+      className="responsive-modal-backdrop"
       style={{
         position: "fixed",
         top: 0,
@@ -63,6 +64,7 @@ export function Modal({
       aria-labelledby="modal-title"
     >
       <div
+        className="responsive-modal-content"
         style={{
           backgroundColor: "#fff",
           padding: "32px",
@@ -81,7 +83,7 @@ export function Modal({
         <p style={{ marginBottom: "24px", color: "#64748b", fontSize: "0.95rem", lineHeight: 1.5 }}>
           {description}
         </p>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+        <div className="responsive-modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
           <Button
             type="button"
             onClick={onClose}

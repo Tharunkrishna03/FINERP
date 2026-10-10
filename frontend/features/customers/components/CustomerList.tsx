@@ -297,6 +297,7 @@ export default function CustomerList() {
 
       {accountsModalProfile && (
         <div
+          className="customer-accounts-backdrop"
           style={{
             position: "fixed",
             top: 0,
@@ -317,6 +318,7 @@ export default function CustomerList() {
           aria-labelledby="accounts-modal-title"
         >
           <div
+            className="customer-accounts-modal"
             style={{
               backgroundColor: "#fff",
               borderRadius: "16px",
@@ -331,6 +333,7 @@ export default function CustomerList() {
             onClick={(e) => e.stopPropagation()}
           >
             <div
+              className="customer-accounts-modal-header"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -387,7 +390,7 @@ export default function CustomerList() {
               </div>
             </div>
 
-            <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
+            <div className="customer-accounts-modal-body" style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
               {accountsModalProfile.accounts.length === 0 ? (
                 <div style={{ padding: "32px 12px", textAlign: "center", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 8, color: "#64748b" }}>
                   No accounts yet. Add an account when the customer borrows against a jewel.

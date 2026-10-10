@@ -6,8 +6,7 @@ Customer and jewel backed loan management with customer records, loan schedules,
 
 - Frontend: Next.js 16, React 19, TypeScript
 - Backend: Django 5.2, Django REST Framework, JWT authentication
-- Local development database: SQLite
-- Production database: PostgreSQL through `DATABASE_URL`
+- Database: Supabase PostgreSQL through `DATABASE_URL`
 - Production media: private S3 compatible object storage with expiring signed URLs
 
 ## Run locally (PowerShell)
@@ -20,6 +19,7 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 $env:DJANGO_DEBUG = "true"
 $env:DJANGO_SECRET_KEY = (& .\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())").Trim()
+# Set DATABASE_URL to the Supabase PostgreSQL connection URI before running Django.
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py createsuperuser
 .\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
@@ -52,7 +52,7 @@ Configure the Render web service with:
 | `DJANGO_DEBUG` | `False` |
 | `DJANGO_SECRET_KEY` | Generate a private random value in Render |
 | `DJANGO_ALLOWED_HOSTS` | `finerp-wpku.onrender.com` plus the exact Vercel/custom domain if Django receives that host |
-| `DATABASE_URL` | Internal connection URL for the production PostgreSQL database |
+| `DATABASE_URL` | Supabase PostgreSQL connection URI (direct or pooler; SSL required) |
 | `DJANGO_TRUST_X_FORWARDED_PROTO` | `True` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated HTTPS Vercel/custom frontend origins |
 | `AWS_STORAGE_BUCKET_NAME` | Private S3 compatible bucket name |
@@ -68,7 +68,7 @@ Use the repository root as the Vercel project root and set the framework to **Se
 
 ## Deployment notes
 
-- Production startup fails intentionally if the secret key, allowed hosts, PostgreSQL URL, or S3 media configuration is missing. SQLite and local media are for development only.
+- Startup requires a Supabase PostgreSQL `DATABASE_URL`; other database engines and non-Supabase PostgreSQL hosts are rejected. SSL is required for database connections.
 - Existing photo files must be copied to the configured bucket using the same relative names before production uses the existing database. Back up any files currently on Render before redeploying; Render service filesystems are ephemeral.
 - Configure `DJANGO_EMAIL_*` variables only if the application is set up to send email.
 - HSTS is enabled for one year in production. Subdomain coverage and preload remain disabled until separately reviewed.

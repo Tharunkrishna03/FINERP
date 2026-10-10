@@ -13,7 +13,6 @@
    just delete it once you wire up next/font.
    ========================================================================== */
 
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* ==========================================================================
@@ -1051,7 +1050,7 @@ table td { border: 1px solid var(--color-border); }
     border-radius: 16px;
   }
   .sidebar.is-open { left: 10px; }
-  .search-field { display: none; }
+  .topbar .search-field { display: none; }
   .summary-stat { min-width: 140px; }
 }
 
@@ -1147,6 +1146,268 @@ table td { border: 1px solid var(--color-border); }
   }
 }
 
+/* Keep dashboard grid items from forcing the shell wider than the viewport. */
+.app-shell,
+.app-shell > *,
+.main-content,
+.topbar,
+.topbar-actions,
+.dashboard-page-content,
+.page-header {
+  min-width: 0;
+}
+
+.table-scroll {
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    height: calc(100dvh - 20px);
+  }
+
+  .topbar {
+    padding-inline: 16px;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .profile-meta {
+    min-width: 0;
+    max-width: min(180px, 30vw);
+  }
+
+  .profile-meta .name,
+  .profile-meta .role {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    min-width: 0;
+    padding: 16px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-header h1 {
+    max-width: 100%;
+    flex-wrap: wrap !important;
+    overflow-wrap: anywhere;
+  }
+
+  .page-header .actions {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .table-scroll {
+    width: 100%;
+  }
+
+  .table-scroll > table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .responsive-form-grid > *,
+  .settings-form-row > * {
+    min-width: 0;
+  }
+
+  .settings-tab-bar {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-tab-bar > button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .responsive-form-card,
+  .settings-panel {
+    padding: 22px !important;
+  }
+
+  .settings-photo-row {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+  }
+
+  .settings-photo-controls {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .settings-photo-controls > span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .responsive-modal-backdrop,
+  .customer-accounts-backdrop {
+    padding: 16px !important;
+  }
+
+  .responsive-modal-content {
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 24px !important;
+  }
+
+  .responsive-modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .customer-accounts-modal {
+    width: 100% !important;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px) !important;
+  }
+
+  .customer-accounts-modal-header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 18px !important;
+  }
+
+  .customer-accounts-modal-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 180px;
+    overflow-wrap: anywhere;
+  }
+
+  .customer-accounts-modal-header > div:last-child {
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+
+  .customer-accounts-modal-body {
+    min-width: 0;
+    padding: 16px 18px !important;
+  }
+
+  .responsive-not-found-card {
+    padding: 36px 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding-inline: 12px;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .profile-trigger {
+    gap: 6px;
+    padding-right: 2px;
+  }
+
+  .profile-meta {
+    max-width: min(104px, 29vw);
+  }
+
+  .responsive-form-card,
+  .settings-panel {
+    padding: 16px !important;
+  }
+
+  .settings-tab-bar {
+    margin-bottom: 18px !important;
+    padding-inline: 4px !important;
+  }
+
+  .settings-tab-bar > button {
+    padding-inline: 12px !important;
+    font-size: 13px !important;
+  }
+
+  .settings-photo-row {
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .settings-actions,
+  .responsive-actions {
+    flex-wrap: wrap;
+  }
+
+  .responsive-actions > .btn,
+  .settings-actions > .btn {
+    flex: 1 1 120px;
+  }
+
+  .responsive-modal-backdrop,
+  .customer-accounts-backdrop {
+    padding: 12px !important;
+  }
+
+  .responsive-modal-content {
+    max-height: calc(100dvh - 24px);
+    padding: 20px !important;
+  }
+
+  .responsive-modal-actions > button {
+    flex: 1 1 auto;
+  }
+
+  .customer-accounts-modal {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  .customer-accounts-modal-header {
+    gap: 10px;
+    padding: 14px 14px !important;
+  }
+
+  .customer-accounts-modal-header > div:last-child {
+    gap: 8px !important;
+  }
+
+  .customer-accounts-modal-body {
+    padding: 14px !important;
+  }
+
+  .responsive-not-found-card {
+    padding: 24px 16px !important;
+  }
+
+  .toast-container {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    left: max(12px, env(safe-area-inset-left));
+    align-items: stretch;
+  }
+
+  .toast {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 /* Modern Pill-Style Breadcrumb Navigation */
 .page-header h1 {
   display: inline-flex !important;
@@ -1221,5 +1482,281 @@ table td { border: 1px solid var(--color-border); }
   .login-card:hover,
   .login-brand-card:hover {
     translate: none;
+  }
+}
+
+/* Login page: blue split layout with gold-loan branding */
+.login-page {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #f3f8ff;
+}
+
+.login-brand-panel {
+  flex: 1.08 1 0;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  justify-content: center;
+  padding: 36px clamp(28px, 5vw, 76px);
+  background:
+    radial-gradient(circle at 18% 78%, rgba(191, 219, 254, 0.7), transparent 23%),
+    linear-gradient(145deg, #f9fcff 0%, #edf5ff 100%);
+}
+
+.login-brand-logo {
+  position: absolute;
+  top: clamp(20px, 3vw, 38px);
+  left: clamp(22px, 3.4vw, 48px);
+  z-index: 2;
+  width: min(190px, 30vw);
+}
+
+.login-brand-logo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.login-illustration-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 650px);
+  margin: 40px auto 0;
+}
+
+.gold-loan-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.login-form-panel {
+  position: relative;
+  z-index: 1;
+  flex: 0.92 1 0;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: clamp(36px, 6vw, 88px);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.34), transparent 34%),
+    linear-gradient(145deg, #123d73 0%, #092b56 58%, #071e3e 100%);
+}
+
+.login-form-panel::before,
+.login-form-panel::after {
+  position: absolute;
+  border: 1px solid rgba(191, 219, 254, 0.14);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.login-form-panel::before {
+  top: -210px;
+  right: -170px;
+  width: 440px;
+  height: 440px;
+}
+
+.login-form-panel::after {
+  right: -100px;
+  bottom: -220px;
+  width: 380px;
+  height: 380px;
+}
+
+.login-form-panel .login-card {
+  z-index: 1;
+  width: 100%;
+  max-width: 430px;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-form-panel .login-card::before {
+  display: none;
+}
+
+.login-form-panel .login-card h1 {
+  margin-bottom: 10px;
+  color: #fff;
+  font-size: clamp(30px, 3vw, 38px);
+  letter-spacing: -0.035em;
+}
+
+.login-form-panel .login-card .subtitle {
+  margin-bottom: 34px;
+  color: #c7dcf7;
+}
+
+.login-form-panel .login-card .form-label {
+  color: #eaf3ff;
+}
+
+.login-form-panel .login-card .form-label .required {
+  color: #f6c453;
+}
+
+.login-form-panel .login-card .input {
+  border-color: rgba(219, 234, 254, 0.55);
+  background: rgba(248, 251, 255, 0.97);
+  color: #10294a;
+}
+
+.login-form-panel .login-card .input::placeholder {
+  color: #7b8da6;
+}
+
+.login-form-panel .login-card .input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.22);
+}
+
+.login-form-panel .login-card .btn-primary {
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  box-shadow: 0 8px 20px rgba(3, 105, 203, 0.28);
+}
+
+.login-form-panel .login-card .btn-primary:hover {
+  background: linear-gradient(135deg, #3b91f5 0%, #1d4ed8 100%);
+  box-shadow: 0 10px 24px rgba(3, 105, 203, 0.38);
+}
+
+.login-form-panel .login-card .btn-secondary {
+  border-color: rgba(219, 234, 254, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eff6ff;
+}
+
+.login-form-panel .login-card .btn-secondary:hover {
+  border-color: rgba(219, 234, 254, 0.8);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.login-form-panel .login-card .btn-ghost {
+  color: #bfdbfe;
+}
+
+.login-form-panel .login-card .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.login-form-panel .login-card:hover {
+  translate: none;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .login-page {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .login-brand-panel {
+    flex: none;
+    min-height: 0;
+    width: 100%;
+    height: clamp(320px, 40vh, 390px);
+    height: clamp(320px, 40svh, 390px);
+    padding: 80px 20px 0;
+  }
+
+  .login-brand-logo {
+    top: 16px;
+    left: 20px;
+    width: min(150px, 36vw);
+  }
+
+  .login-illustration-wrap {
+    width: min(100%, 300px);
+    margin: 0 auto;
+  }
+
+  .login-form-panel {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    align-items: center;
+    padding: 38px 24px 48px;
+  }
+
+  .login-form-panel .login-card {
+    min-width: 0;
+    max-width: 460px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-brand-panel {
+    height: clamp(280px, 42vh, 340px);
+    height: clamp(280px, 42svh, 340px);
+    padding: 60px 16px 0;
+  }
+
+  .login-brand-logo {
+    top: 12px;
+    left: 16px;
+    width: 126px;
+  }
+
+  .login-illustration-wrap {
+    width: min(100%, 270px);
+  }
+
+  .login-form-panel {
+    padding: 32px 22px 40px;
+  }
+
+  .login-form-panel .login-card {
+    padding: 0;
+  }
+
+  .login-form-panel .login-card h1 {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-form-panel {
+    padding: 28px max(18px, env(safe-area-inset-right)) 32px max(18px, env(safe-area-inset-left));
+  }
+
+  .login-card .form-actions {
+    gap: 8px;
+  }
+
+  .login-card .form-actions .btn {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) and (max-height: 500px) {
+  .login-brand-panel {
+    height: 270px;
+    padding-top: 52px;
+  }
+
+  .login-brand-logo {
+    top: 12px;
+  }
+
+  .login-illustration-wrap {
+    width: min(100%, 270px);
   }
 }

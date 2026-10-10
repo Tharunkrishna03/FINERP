@@ -252,8 +252,7 @@ export default function Settings() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setCurrentPhotoUrl(data.profile_image || "");
+        await response.json();
         toast.success("Profile updated successfully!");
         setTimeout(() => window.location.reload(), 1000);
       } else {
@@ -355,6 +354,7 @@ export default function Settings() {
 
       {/* Tab Bar Navigation */}
       <div
+        className="settings-tab-bar"
         style={{
           display: "flex",
           gap: "8px",
@@ -447,7 +447,7 @@ export default function Settings() {
 
       {/* Tab 1: Profile & Preferences */}
       {activeTab === "profile" && (
-        <div className="card" style={{ padding: "28px" }}>
+        <div className="card settings-panel" style={{ padding: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div style={{ padding: 10, background: "#eff6ff", borderRadius: 10, color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
@@ -463,7 +463,7 @@ export default function Settings() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Avatar Uploader Header Box */}
-            <div style={{ display: "flex", alignItems: "center", gap: "20px", padding: "16px 20px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+            <div className="settings-photo-row" style={{ display: "flex", alignItems: "center", gap: "20px", padding: "16px 20px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
               <div style={{ position: "relative" }}>
                 {avatarDisplayUrl ? (
                   <img
@@ -494,7 +494,7 @@ export default function Settings() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <label className="form-label" style={{ margin: 0 }}>Profile Photo</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="settings-photo-controls" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <label
                     style={{
                       padding: "6px 14px",
@@ -585,7 +585,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+            <div className="settings-actions" style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
               <Button type="button" onClick={handleSave} disabled={loading} className="btn btn-primary transition-colors">
                 {loading ? "Saving changes..." : "Save Changes"}
               </Button>
@@ -596,7 +596,7 @@ export default function Settings() {
 
       {/* Tab 2: Security */}
       {activeTab === "security" && (
-        <div className="card" style={{ padding: "28px" }}>
+        <div className="card settings-panel" style={{ padding: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div style={{ padding: 10, background: "#fef3c7", borderRadius: 10, color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
@@ -666,7 +666,7 @@ export default function Settings() {
               <span className="form-hint">Enter a secure new password for your account.</span>
             </div>
 
-            <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+            <div className="settings-actions" style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
               <Button
                 type="button"
                 onClick={handlePasswordSave}
@@ -682,7 +682,7 @@ export default function Settings() {
 
       {/* Tab 3: User Management (Superuser) */}
       {activeTab === "users" && isSuperuser && (
-        <div className="card" style={{ padding: "28px" }}>
+        <div className="card settings-panel" style={{ padding: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div style={{ padding: 10, background: "#ecfdf5", borderRadius: 10, color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
@@ -753,7 +753,7 @@ export default function Settings() {
                   <span className="form-hint">Select at least one module this user can access after sign-in.</span>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div className="settings-actions" style={{ display: "flex", justifyContent: "flex-end" }}>
                   <Button
                     type="button"
                     onClick={handleCreateUser}

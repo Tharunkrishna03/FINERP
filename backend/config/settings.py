@@ -101,47 +101,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database configuration (Supabase PostgreSQL with SQLite fallback)
-DATABASE_URL = os.environ.get('DATABASE_URL')
-POSTGRES_HOST = os.environ.get('POSTGRES_HOST') or os.environ.get('DB_HOST')
+# Supabase PostgreSQL is the only supported application database.
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+if not DATABASE_URL:
+    raise ImproperlyConfigured("Set DATABASE_URL to the Supabase PostgreSQL connection URI.")
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=60,
-            conn_health_checks=True,
-            ssl_require=not DEBUG,
-        )
-    }
-elif POSTGRES_HOST:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', os.environ.get('DB_NAME', 'postgres')),
-            'USER': os.environ.get('POSTGRES_USER', os.environ.get('DB_USER', 'postgres')),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', os.environ.get('DB_PASSWORD', '')),
-            'HOST': POSTGRES_HOST,
-            'PORT': os.environ.get('POSTGRES_PORT', os.environ.get('DB_PORT', '5432')),
-            'OPTIONS': {
-                'sslmode': 'require' if 'supabase' in POSTGRES_HOST else 'prefer',
-            },
-        }
-    }
-else:
-    # SQLite is a convenient local development fallback. Render's filesystem is
-    # ephemeral, so production must use a managed PostgreSQL database.
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-
-if not DEBUG and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
-    raise ImproperlyConfigured(
-        "Configure DATABASE_URL (PostgreSQL) for production; SQLite is only for local development."
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=60,
+        conn_health_checks=True,
+        ssl_require=True,
     )
+}
+
+default_database = DATABASES['default']
+if default_database['ENGINE'] != 'django.db.backends.postgresql':
+    raise ImproperlyConfigured("DATABASE_URL must use PostgreSQL for the Supabase database.")
+
+database_host = (default_database.get('HOST') or '').lower()
+if not database_host.endswith(('.supabase.co', '.supabase.com')):
+    raise ImproperlyConfigured("DATABASE_URL must point to a Supabase PostgreSQL host.")
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

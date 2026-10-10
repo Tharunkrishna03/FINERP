@@ -1,7 +1,6 @@
 BACKEND
 ROOT
   backend_tree.txt
-  db.sqlite3
   error_log.html
   manage.py
   output.txt

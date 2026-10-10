@@ -190,7 +190,7 @@ export default function AddCustomerAccountForm() {
       </div>
 
       {/* Account Details Form Card */}
-      <form className="card" onSubmit={handleSubmit} style={{ width: "100%", padding: "32px", borderRadius: 16 }}>
+      <form className="card responsive-form-card" onSubmit={handleSubmit} style={{ width: "100%", padding: "32px", borderRadius: 16 }}>
         {/* Form Card Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28, borderBottom: "1px solid #e2e8f0", paddingBottom: 18 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -329,7 +329,7 @@ export default function AddCustomerAccountForm() {
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 32, borderTop: "1px solid #f1f5f9", paddingTop: 20 }}>
+        <div className="responsive-actions" style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 32, borderTop: "1px solid #f1f5f9", paddingTop: 20 }}>
           <Button type="button" className="btn btn-secondary" onClick={() => router.push("/customer-list")}>Cancel</Button>
           <Button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? "Saving…" : accountId ? "Save Account" : "Create Account"}

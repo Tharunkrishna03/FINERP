@@ -60,7 +60,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isFetching && dashboardRef.current) {
       const ctx = gsap.context(() => {
-        gsap.from(".bento-card", {
+        gsap.from(".bento-card, .dashboard-header", {
           y: 18,
           opacity: 0,
           duration: 0.55,
@@ -460,7 +460,7 @@ export default function Dashboard() {
       <div className="w-full max-w-none">
         
         {/* Page Title & Operational Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bento-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 dashboard-header">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Overview</h1>
@@ -470,7 +470,7 @@ export default function Dashboard() {
               </span>
             </div>
             <p className="text-xs text-slate-700 mt-1">
-              Welcome back, {profile.user_name ? profile.user_name.split(' ')[0] : "User"}. Loan and payment totals from your records.
+              Welcome back,  {profile.user_name ? profile.user_name.split(' ')[0] : "User"}. 
             </p>
           </div>
 

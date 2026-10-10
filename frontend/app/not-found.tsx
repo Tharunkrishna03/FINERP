@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function NotFound() {
   return (
     <div className="login-shell">
-      <div className="card empty-state" style={{ padding: "60px 40px", maxWidth: "480px", width: "100%", margin: "auto" }}>
+      <div className="card empty-state responsive-not-found-card" style={{ padding: "60px 40px", maxWidth: "480px", width: "100%", margin: "auto" }}>
         <img 
           src="/page_not_found.svg" 
           alt="Page Not Found" 

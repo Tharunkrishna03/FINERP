@@ -680,7 +680,7 @@ function AddCustomerForm() {
       ))}
 
       {/* Section 4: Actions */}
-      <div style={{ display: "flex", justifyContent: "flex-start", gap: "12px", marginTop: 24 }}>
+      <div className="responsive-actions" style={{ display: "flex", justifyContent: "flex-start", gap: "12px", marginTop: 24 }}>
         <Button type="button" onClick={() => router.push("/customer-list")} className="btn btn-secondary" style={{ color: "#ef4444" }}>Cancel</Button>
         <Button type="button" onClick={handleSave} disabled={loading} className="btn btn-success transition-colors">
           {loading ? "Saving..." : "Save Customer"}
