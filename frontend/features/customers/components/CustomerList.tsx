@@ -24,6 +24,8 @@ export default function CustomerList() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [invoiceProfileId, setInvoiceProfileId] = useState<number | null>(null);
+  const [invoiceSelectedAccounts, setInvoiceSelectedAccounts] = useState<number[]>([]);
   const router = useRouter();
 
   const loadProfiles = useCallback(async () => {
@@ -91,6 +93,16 @@ export default function CustomerList() {
   const accountsModalProfile = useMemo(
     () => profiles.find((p) => p.id === accountsModalProfileId) || null,
     [profiles, accountsModalProfileId]
+  );
+
+  const invoiceProfile = useMemo(
+    () => profiles.find((p) => p.id === invoiceProfileId) || null,
+    [profiles, invoiceProfileId]
+  );
+
+  const invoiceActiveAccounts = useMemo(
+    () => (invoiceProfile?.accounts || []).filter((a) => a.status === "Active"),
+    [invoiceProfile]
   );
 
   useEffect(() => {
@@ -252,6 +264,11 @@ export default function CustomerList() {
                       <Button type="button" className="btn-icon" title="View history" aria-label="View history" onClick={() => router.push("/customer-list/" + profile.id)} style={{ border: "none", background: "transparent", width: 32, height: 32, padding: 0, color: "#0284c7", borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
                       </Button>
+                      {profile.status === "Active" && (
+                        <Button type="button" className="btn-icon" title="Generate Invoice" aria-label="Generate invoice" onClick={() => { setInvoiceProfileId(profile.id); setInvoiceSelectedAccounts([]); }} style={{ border: "none", background: "transparent", width: 32, height: 32, padding: 0, color: "#7c3aed", borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        </Button>
+                      )}
                       <Button type="button" className="btn-icon" title="Add account" aria-label="Add account" onClick={() => router.push("/add-account?profileId=" + profile.id)} style={{ border: "none", background: "transparent", width: 32, height: 32, padding: 0, color: "#2563eb", borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                       </Button>
@@ -463,6 +480,162 @@ export default function CustomerList() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Account Selector Modal */}
+      {invoiceProfile && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.4)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setInvoiceProfileId(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invoice-modal-title"
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "16px",
+              width: "95%",
+              maxWidth: "620px",
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "18px 24px",
+                borderBottom: "1px solid var(--color-border)",
+              }}
+            >
+              <div>
+                <h3 id="invoice-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#0f172a" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20, verticalAlign: "middle", marginRight: 8 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  Generate Invoice
+                </h3>
+                <span style={{ fontSize: 13, color: "#64748b" }}>
+                  Select accounts for {invoiceProfile.customer_name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInvoiceProfileId(null)}
+                aria-label="Close"
+                style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4, color: "#64748b", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
+              {invoiceActiveAccounts.length === 0 ? (
+                <div style={{ padding: "32px 12px", textAlign: "center", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 8, color: "#64748b" }}>
+                  No active accounts to generate invoice.
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 500 }}>
+                      <input
+                        type="checkbox"
+                        checked={invoiceSelectedAccounts.length === invoiceActiveAccounts.length && invoiceActiveAccounts.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setInvoiceSelectedAccounts(invoiceActiveAccounts.map((a) => a.id));
+                          } else {
+                            setInvoiceSelectedAccounts([]);
+                          }
+                        }}
+                        style={{ width: 16, height: 16, accentColor: "#7c3aed", cursor: "pointer" }}
+                      />
+                      Select All ({invoiceActiveAccounts.length})
+                    </label>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {invoiceActiveAccounts.map((account) => (
+                      <label
+                        key={account.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          padding: "12px 14px",
+                          border: invoiceSelectedAccounts.includes(account.id) ? "2px solid #7c3aed" : "1px solid #e2e8f0",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          background: invoiceSelectedAccounts.includes(account.id) ? "#f5f3ff" : "#fff",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={invoiceSelectedAccounts.includes(account.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setInvoiceSelectedAccounts((prev) => [...prev, account.id]);
+                            } else {
+                              setInvoiceSelectedAccounts((prev) => prev.filter((id) => id !== account.id));
+                            }
+                          }}
+                          style={{ width: 16, height: 16, marginTop: 2, accentColor: "#7c3aed", cursor: "pointer" }}
+                        />
+                        <div style={{ flex: 1, fontSize: 13 }}>
+                          <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: 2 }}>
+                            {account.sno ? `SNO: ${account.sno}` : ""}{account.sno && account.ano ? " · " : ""}{account.ano ? `ANO: ${account.ano}` : ""}
+                            {!account.sno && !account.ano ? `Account #${account.id}` : ""}
+                          </div>
+                          <div style={{ color: "#64748b", display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            <span>Rs. {money(account.amount)}</span>
+                            <span>{account.item_type || "–"} · {account.purity || "–"} · {account.weight}g</span>
+                            <span>Date: {account.date}</span>
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {invoiceActiveAccounts.length > 0 && (
+              <div style={{ padding: "16px 24px", borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <Button type="button" className="btn btn-secondary" onClick={() => setInvoiceProfileId(null)} style={{ padding: "8px 16px", fontSize: 13 }}>Cancel</Button>
+                <Button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={invoiceSelectedAccounts.length === 0}
+                  onClick={() => {
+                    setInvoiceProfileId(null);
+                    router.push("/invoice?accounts=" + invoiceSelectedAccounts.join(","));
+                  }}
+                  style={{ padding: "8px 20px", fontSize: 13, background: "#7c3aed", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  Generate Invoice ({invoiceSelectedAccounts.length})
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
