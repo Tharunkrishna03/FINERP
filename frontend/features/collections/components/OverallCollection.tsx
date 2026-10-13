@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/Button";
+import { usePathname } from "next/navigation";
 import { Table } from "@/components/ui/Table";
 import { fetchApi } from '@/services/api/client';
 import { Customer } from "../../customers/types/customer.types";

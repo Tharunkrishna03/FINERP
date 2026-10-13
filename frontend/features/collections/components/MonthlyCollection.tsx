@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/Button";
+import { usePathname } from "next/navigation";
 import { Table } from "@/components/ui/Table";
 import { fetchApi } from '@/services/api/client';
 import { Customer } from "../../customers/types/customer.types";
@@ -93,6 +94,12 @@ export default function MonthlyCollection() {
             <span style={{ fontSize: "0.9em", color: "inherit" }}>/</span>
             <span className="breadcrumb-active" style={{ color: "inherit" }}>Monthly Collection</span>
           </h1>
+        </div>
+        {/* Filter chips */}
+        <div className="flex gap-2 mb-4">
+          <Link href="/today-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/today-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Today</Link>
+          <Link href="/monthly-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/monthly-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Monthly</Link>
+          <Link href="/overall-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/overall-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Overall</Link>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/Button";
+import { usePathname } from "next/navigation";
 import { Table } from "@/components/ui/Table";
 import { fetchApi } from '@/services/api/client';
 import { Customer } from "../../customers/types/customer.types";
@@ -97,6 +98,12 @@ export default function TodayCollection() {
           </h1>
         </div>
       </div>
+        {/* Filter chips */}
+        <div className="flex gap-2 mb-4">
+          <Link href="/today-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/today-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Today</Link>
+          <Link href="/monthly-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/monthly-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Monthly</Link>
+          <Link href="/overall-collection" className={`px-3 py-1 rounded-full border ${usePathname() === '/overall-collection' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>Overall</Link>
+        </div>
 
       <div className="card hover:shadow-lg transition-all duration-300" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "20px 24px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--color-border)" }}>
