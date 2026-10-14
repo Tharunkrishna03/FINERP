@@ -131,11 +131,20 @@ class JewelDetail(models.Model):
         return self.item_type
 
 
+class Role(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class UserProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     user_name = models.CharField(max_length=255, default="John Doe")
-    role = models.CharField(max_length=100, default="Administrator")
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='profiles')
     profile_image = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
-    
+
     sno_format = models.CharField(max_length=50, default="1")
     ano_format = models.CharField(max_length=50, default="1")
     customer_id_no_format = models.CharField(max_length=50, default="1")
@@ -179,9 +188,9 @@ def get_user_role(user):
     if getattr(user, "is_superuser", False):
         return "Administrator"
     try:
-        access = getattr(user, "module_access", None)
-        if access and getattr(access, "role", None):
-            return access.role
+        profile = getattr(user, "profile", None)
+        if profile and profile.role:
+            return profile.role.name
     except Exception:
         pass
     return "Staff"
@@ -191,9 +200,10 @@ def set_user_role(user, role_name):
     if not user or not getattr(user, "is_authenticated", False):
         return
     role_str = str(role_name).strip() if role_name else "Staff"
-    access, _ = UserModuleAccess.objects.get_or_create(user=user)
-    access.role = role_str
-    access.save(update_fields=["role"])
+    role_obj, _ = Role.objects.get_or_create(name=role_str)
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.role = role_obj
+    profile.save(update_fields=["role"])
     if role_str.lower() == "administrator":
         if not user.is_staff:
             user.is_staff = True

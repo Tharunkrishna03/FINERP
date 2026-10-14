@@ -163,7 +163,7 @@ export default function LoginForm() {
                 <input
                   type="text"
                   id="username"
-                  className="input"
+                  className="w-full px-4 py-2 bg-white bg-opacity-80 backdrop-blur-lg rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
                   placeholder="Enter your username"
                   required
                   value={username}
@@ -180,7 +180,7 @@ export default function LoginForm() {
                 <input
                   type="password"
                   id="password"
-                  className="input"
+                  className="w-full px-4 py-2 bg-white bg-opacity-80 backdrop-blur-lg rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
                   placeholder="••••••••"
                   required
                   value={password}
@@ -199,7 +199,7 @@ export default function LoginForm() {
               <Button type="button" onClick={() => { setUsername(""); setPassword(""); }} className="btn btn-secondary">
                 Cancel
               </Button>
-              <Button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
+              <Button type="submit" className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>
                 {loading ? "Logging in..." : "Login"}
               </Button>
             </div>

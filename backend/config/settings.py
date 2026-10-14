@@ -120,7 +120,7 @@ if default_database['ENGINE'] != 'django.db.backends.postgresql':
     raise ImproperlyConfigured("DATABASE_URL must use PostgreSQL for the Supabase database.")
 
 database_host = (default_database.get('HOST') or '').lower()
-if not database_host.endswith(('.supabase.co', '.supabase.com')):
+if not DEBUG and not database_host.endswith(('.supabase.co', '.supabase.com')):
     raise ImproperlyConfigured("DATABASE_URL must point to a Supabase PostgreSQL host.")
 
 # Password validation
