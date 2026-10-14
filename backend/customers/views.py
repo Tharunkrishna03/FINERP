@@ -57,7 +57,7 @@ class CustomerListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         profile = serializer.validated_data.get("profile")
         if profile is None:
-            user_profile, _ = UserProfile.objects.select_for_update().get_or_create(pk=1)
+            user_profile, _ = UserProfile.objects.select_for_update().get_or_create(user=self.request.user)
             customer_id_no = CustomerService.get_next_number(
                 "customer_id_no", user_profile.customer_id_no_format
             )
@@ -88,7 +88,7 @@ class CustomerProfileListCreateView(generics.ListCreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        user_profile, _ = UserProfile.objects.select_for_update().get_or_create(pk=1)
+        user_profile, _ = UserProfile.objects.select_for_update().get_or_create(user=self.request.user)
         customer_id_no = CustomerService.get_next_number(
             "customer_id_no", user_profile.customer_id_no_format
         )
@@ -306,7 +306,7 @@ class UserProfileView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
-        profile, _ = UserProfile.objects.get_or_create(id=1)
+        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
         return profile
 
     def get(self, request, *args, **kwargs):
