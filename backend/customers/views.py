@@ -86,6 +86,20 @@ def replace_user_avatar(user, uploaded_image):
             pass
     return avatar
 
+
+def get_user_profile_image_url(user, profile=None, avatar=None):
+    """Return the current avatar URL, falling back to the legacy profile field."""
+    if avatar is None:
+        avatar = UserAvatar.objects.filter(user=user).first()
+    if avatar and avatar.image:
+        return avatar.image.url
+
+    if profile is None:
+        profile = UserProfile.objects.filter(user=user).first()
+    if profile and profile.profile_image:
+        return profile.profile_image.url
+    return None
+
 class CustomerListCreateView(generics.ListCreateAPIView):
     permission_classes = (ModuleAccessPermission,)
     required_module = "customers"
@@ -388,7 +402,7 @@ class UserProfileView(APIView):
             "user_name": user_name,
             "username": user.username if (user and user.is_authenticated) else "",
             "role": role,
-            "profile_image": avatar.image.url if (avatar and avatar.image) else None,
+            "profile_image": get_user_profile_image_url(user, profile, avatar),
             "is_superuser": is_superuser,
             "visible_modules": visible_modules,
             "sno_format": sequence_profile.sno_format,
@@ -469,7 +483,7 @@ class UserProfileView(APIView):
             ),
             "username": user.username,
             "role": get_user_role(user),
-            "profile_image": avatar.image.url if (avatar and avatar.image) else None,
+            "profile_image": get_user_profile_image_url(user, profile, avatar),
             "is_superuser": bool(user.is_superuser),
             "visible_modules": get_visible_modules(user),
             "sno_format": sequence_profile.sno_format,
@@ -634,8 +648,8 @@ class ListUsersView(APIView):
             for access in UserModuleAccess.objects.select_related("user").all()
         }
         profiles_by_user = {
-            profile.user_id: profile.user_name
-            for profile in UserProfile.objects.all()
+            profile.user_id: profile
+            for profile in UserProfile.objects.filter(user__isnull=False)
         }
         avatars_by_user = {
             a.user_id: a.image.url
@@ -648,15 +662,21 @@ class ListUsersView(APIView):
                 "id": user.id,
                 "username": user.username,
                 "user_name": (
-                    profiles_by_user.get(user.id)
-                    if profiles_by_user.get(user.id) not in {None, "", "John Doe"}
+                    profiles_by_user[user.id].user_name
+                    if user.id in profiles_by_user
+                    and profiles_by_user[user.id].user_name not in {None, "", "John Doe"}
                     else user.username
                 ),
                 "role": get_user_role(user),
                 "is_superuser": user.is_superuser,
                 "is_active": user.is_active,
                 "date_joined": user.date_joined,
-                "profile_image": avatars_by_user.get(user.id),
+                "profile_image": avatars_by_user.get(user.id)
+                or (
+                    profiles_by_user[user.id].profile_image.url
+                    if user.id in profiles_by_user and profiles_by_user[user.id].profile_image
+                    else None
+                ),
                 "visible_modules": (
                     list(USER_MODULE_KEYS)
                     if user.is_superuser
