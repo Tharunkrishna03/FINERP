@@ -311,8 +311,6 @@ function AddCustomerForm() {
 
     try {
       const formData = new FormData();
-      formData.append("sno", sno);
-      formData.append("ano", ano);
       formData.append("amount", transactionAmount || "0");
       formData.append("date", transactionDate);
       formData.append("customer_name", customerName);

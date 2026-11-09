@@ -51,7 +51,10 @@ function getApiErrorMessage(value: unknown, fallback: string): string {
   return extract(value) || fallback;
 }
 
+const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export default function Settings() {
+  const [username, setUsername] = useState("");
   const [userName, setUserName] = useState("");
   const [role, setRole] = useState("Administrator");
   const [snoFormat, setSnoFormat] = useState("1");
@@ -124,7 +127,13 @@ export default function Settings() {
         const res = await fetchApi("/api/profile/");
         if (res.ok) {
           const data = await res.json();
-          setUserName(data.user_name || "");
+          const loginUsername = typeof data.username === "string" ? data.username : "";
+          setUsername(loginUsername);
+          setUserName(
+            typeof data.user_name === "string" && data.user_name.trim()
+              ? data.user_name
+              : loginUsername,
+          );
           setRole(data.role || "Administrator");
           setSnoFormat(data.sno_format || "1");
           setAnoFormat(data.ano_format || "1");
@@ -144,15 +153,27 @@ export default function Settings() {
     fetchUsers(false);
   }, [fetchUsers]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    if (file && file.size > MAX_PROFILE_IMAGE_BYTES) {
+      e.currentTarget.value = "";
+      toast.warning("Choose an image that is 5 MB or smaller.");
+      return;
+    }
+
     setPhoto(file);
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+      setPreviewUrl(URL.createObjectURL(file));
     } else {
       setPreviewUrl("");
     }
+    e.currentTarget.value = "";
   };
 
   const handleCreateUser = async () => {
@@ -235,30 +256,10 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      if (photo) {
-        const avatarData = new FormData();
-        avatarData.append("image", photo);
-
-        const avatarResponse = await fetchApi("/api/profile/avatar/", {
-          method: "POST",
-          body: avatarData,
-        });
-
-        if (!avatarResponse.ok) {
-          const errData = await avatarResponse.json().catch(() => null);
-          toast.warning(getApiErrorMessage(errData, "Unable to update the profile image. Try again."));
-          return;
-        }
-
-        const avatar = await avatarResponse.json();
-        setCurrentPhotoUrl(avatar.profile_image || "");
-        setPreviewUrl("");
-        setPhoto(null);
-      }
-
       const formData = new FormData();
       formData.append("user_name", userName);
       formData.append("role", role);
+      if (photo) formData.append("profile_image", photo);
       if (isSuperuser) {
         formData.append("sno_format", snoFormat);
         formData.append("ano_format", anoFormat);
@@ -272,11 +273,12 @@ export default function Settings() {
 
       if (response.ok) {
         const updated = await response.json();
-        setUserName(updated.user_name || userName);
+        setUsername(updated.username || username);
+        setUserName(updated.user_name || updated.username || userName);
         setRole(updated.role || role);
-        if (updated.profile_image) {
-          setCurrentPhotoUrl(updated.profile_image);
-        }
+        setCurrentPhotoUrl(updated.profile_image || "");
+        setPhoto(null);
+        setPreviewUrl("");
         toast.success("Profile updated successfully!");
         setTimeout(() => window.location.reload(), 800);
       } else {
@@ -550,7 +552,23 @@ export default function Settings() {
             </div>
 
             {/* Name & Role Fields */}
-            <div className="settings-form-row settings-form-row--two">
+            <div className="settings-form-row settings-form-row--three">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" htmlFor="profile-username">Username</label>
+                <div className="input-wrap">
+                  <input
+                    id="profile-username"
+                    type="text"
+                    className="input"
+                    value={username}
+                    readOnly
+                    aria-readonly="true"
+                    placeholder="Username unavailable"
+                  />
+                </div>
+                <span className="form-hint">Used to sign in. Contact an administrator to change it.</span>
+              </div>
+
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Full Name</label>
                 <div className="input-wrap">

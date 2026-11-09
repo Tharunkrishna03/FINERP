@@ -236,3 +236,8 @@ class UserAvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAvatar
         fields = ("image",)
+
+    def validate_image(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image must be 5 MB or smaller.")
+        return value

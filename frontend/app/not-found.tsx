@@ -7,7 +7,7 @@ export default function NotFound() {
         <img 
           src="/page_not_found.svg" 
           alt="Page Not Found" 
-          style={{ width: "240px", maxWidth: "100%", height: "auto", margin: "0 auto 24px", display: "block" }} 
+          style={{ width: "500px", maxWidth: "100%", height: "auto", margin: "0 auto 24px", display: "block" }} 
         />
         <h2 style={{ fontSize: "24px", color: "var(--color-text)", marginBottom: "8px" }}>Page Not Found</h2>
         

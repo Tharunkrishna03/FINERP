@@ -47,6 +47,26 @@ def get_visible_modules(user):
     selected = set(modules if isinstance(modules, list) else [])
     return [module for module in USER_MODULE_KEYS if module in selected]
 
+
+def replace_user_avatar(user, uploaded_image):
+    avatar, _ = UserAvatar.objects.get_or_create(user=user)
+    old_image = avatar.image
+    old_name = old_image.name if old_image else None
+    old_storage = old_image.storage if old_image else None
+
+    avatar.image = uploaded_image
+    avatar.save(update_fields=["image"])
+
+    new_name = avatar.image.name
+    if old_name and old_storage and old_name != new_name:
+        try:
+            old_storage.delete(old_name)
+        except Exception:
+            # The new avatar is already stored; cleanup failure should not
+            # report the successful upload as a failure.
+            pass
+    return avatar
+
 class CustomerListCreateView(generics.ListCreateAPIView):
     queryset = Customer.objects.prefetch_related(
         "installments", "payments", "transactions__jewel"
@@ -55,11 +75,14 @@ class CustomerListCreateView(generics.ListCreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
+        sequence_profile = CustomerService.get_identifier_profile(self.request.user)
+        sequence_profile = UserProfile.objects.select_for_update().get(
+            pk=sequence_profile.pk
+        )
         profile = serializer.validated_data.get("profile")
         if profile is None:
-            user_profile, _ = UserProfile.objects.select_for_update().get_or_create(user=self.request.user)
             customer_id_no = CustomerService.get_next_number(
-                "customer_id_no", user_profile.customer_id_no_format
+                "customer_id_no", sequence_profile.customer_id_no_format
             )
             profile = CustomerProfile.objects.create(
                 customer_name=serializer.validated_data["customer_name"],
@@ -76,7 +99,7 @@ class CustomerListCreateView(generics.ListCreateAPIView):
             customer_id_no=profile.customer_id_no,
             address=profile.address,
         )
-        CustomerService.assign_identifiers(customer)
+        CustomerService.assign_identifiers(customer, sequence_profile)
         CustomerService.rebuild_loan_schedule(customer)
 
 
@@ -88,9 +111,12 @@ class CustomerProfileListCreateView(generics.ListCreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        user_profile, _ = UserProfile.objects.select_for_update().get_or_create(user=self.request.user)
+        sequence_profile = CustomerService.get_identifier_profile(self.request.user)
+        sequence_profile = UserProfile.objects.select_for_update().get(
+            pk=sequence_profile.pk
+        )
         customer_id_no = CustomerService.get_next_number(
-            "customer_id_no", user_profile.customer_id_no_format
+            "customer_id_no", sequence_profile.customer_id_no_format
         )
         serializer.save(customer_id_no=customer_id_no)
 
@@ -312,6 +338,7 @@ class UserProfileView(APIView):
     def get(self, request, *args, **kwargs):
         profile = self.get_object()
         user = request.user
+        sequence_profile = CustomerService.get_identifier_profile(user)
         
         avatar = UserAvatar.objects.filter(user=user).first() if (user and user.is_authenticated) else None
         user_name = (
@@ -330,12 +357,12 @@ class UserProfileView(APIView):
             "profile_image": avatar.image.url if (avatar and avatar.image) else None,
             "is_superuser": is_superuser,
             "visible_modules": visible_modules,
-            "sno_format": profile.sno_format,
-            "ano_format": profile.ano_format,
-            "customer_id_no_format": profile.customer_id_no_format,
-            "next_sno": CustomerService.get_next_number("sno", profile.sno_format),
-            "next_ano": CustomerService.get_next_number("ano", profile.ano_format),
-            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format),
+            "sno_format": sequence_profile.sno_format,
+            "ano_format": sequence_profile.ano_format,
+            "customer_id_no_format": sequence_profile.customer_id_no_format,
+            "next_sno": CustomerService.get_next_number("sno", sequence_profile.sno_format),
+            "next_ano": CustomerService.get_next_number("ano", sequence_profile.ano_format),
+            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", sequence_profile.customer_id_no_format),
         }
         return Response(data)
 
@@ -345,6 +372,38 @@ class UserProfileView(APIView):
             return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
         profile = self.get_object()
+        sequence_profile = CustomerService.get_identifier_profile(user)
+
+        sequence_fields = (
+            "sno_format",
+            "ano_format",
+            "customer_id_no_format",
+        )
+        sequence_data = {
+            field: request.data.get(field)
+            for field in sequence_fields
+            if field in request.data
+        }
+        sequence_serializer = None
+        if user.is_superuser and sequence_data:
+            sequence_serializer = UserProfileSerializer(
+                sequence_profile, data=sequence_data, partial=True
+            )
+            if not sequence_serializer.is_valid():
+                return Response(
+                    sequence_serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        uploaded_image = request.FILES.get("profile_image") or request.FILES.get("image")
+        if uploaded_image:
+            image_serializer = UserAvatarSerializer(data={"image": uploaded_image})
+            if not image_serializer.is_valid():
+                return Response(
+                    image_serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            uploaded_image = image_serializer.validated_data["image"]
 
         # 1. Update individual display name
         new_name = request.data.get("user_name")
@@ -353,18 +412,13 @@ class UserProfileView(APIView):
             if new_name:
                 user.first_name = new_name
                 user.save(update_fields=["first_name"])
+                if profile.user_name != new_name:
+                    profile.user_name = new_name
+                    profile.save(update_fields=["user_name"])
 
         # 2. Update individual avatar if passed in PUT
-        uploaded_image = request.FILES.get("profile_image") or request.FILES.get("image")
         if uploaded_image:
-            avatar, _ = UserAvatar.objects.get_or_create(user=user)
-            if avatar.image:
-                try:
-                    avatar.image.delete(save=False)
-                except Exception:
-                    pass
-            avatar.image = uploaded_image
-            avatar.save()
+            avatar = replace_user_avatar(user, uploaded_image)
 
         # 3. Role update (if provided)
         role_val = request.data.get("role")
@@ -372,10 +426,8 @@ class UserProfileView(APIView):
             set_user_role(user, role_val)
 
         # 4. System sequence formats (only admin can change these shared formats)
-        if user.is_superuser:
-            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
+        if sequence_serializer is not None:
+            sequence_serializer.save()
 
         avatar = UserAvatar.objects.filter(user=user).first()
         data = {
@@ -386,12 +438,12 @@ class UserProfileView(APIView):
             "profile_image": avatar.image.url if (avatar and avatar.image) else None,
             "is_superuser": bool(user.is_superuser),
             "visible_modules": get_visible_modules(user),
-            "sno_format": profile.sno_format,
-            "ano_format": profile.ano_format,
-            "customer_id_no_format": profile.customer_id_no_format,
-            "next_sno": CustomerService.get_next_number("sno", profile.sno_format),
-            "next_ano": CustomerService.get_next_number("ano", profile.ano_format),
-            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format),
+            "sno_format": sequence_profile.sno_format,
+            "ano_format": sequence_profile.ano_format,
+            "customer_id_no_format": sequence_profile.customer_id_no_format,
+            "next_sno": CustomerService.get_next_number("sno", sequence_profile.sno_format),
+            "next_ano": CustomerService.get_next_number("ano", sequence_profile.ano_format),
+            "next_customer_id_no": CustomerService.get_next_number("customer_id_no", sequence_profile.customer_id_no_format),
         }
         return Response(data)
 
@@ -405,14 +457,7 @@ class UserAvatarView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        avatar, _ = UserAvatar.objects.get_or_create(user=request.user)
-        if avatar.image:
-            try:
-                avatar.image.delete(save=False)
-            except Exception:
-                pass
-        avatar.image = serializer.validated_data["image"]
-        avatar.save()
+        avatar = replace_user_avatar(request.user, serializer.validated_data["image"])
         return Response({"profile_image": avatar.image.url})
 
     def delete(self, request, *args, **kwargs):

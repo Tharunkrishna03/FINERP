@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from decimal import ROUND_HALF_UP
 from dateutil.relativedelta import relativedelta
@@ -8,6 +9,25 @@ from .models import Customer, CustomerProfile, CustomerTransaction, Installment,
 import re
 
 class CustomerService:
+    @staticmethod
+    def get_identifier_profile(user=None):
+        """Return the shared profile that owns the customer number formats."""
+        admin_id = (
+            get_user_model().objects.filter(is_superuser=True)
+            .order_by("pk")
+            .values_list("pk", flat=True)
+            .first()
+        )
+        if admin_id is not None:
+            profile, _ = UserProfile.objects.get_or_create(user_id=admin_id)
+            return profile
+
+        if user is not None:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            return profile
+
+        return UserProfile.objects.order_by("pk").first()
+
     @staticmethod
     def tenure_due_date(customer, month_number, previous_date):
         overrides = customer.tenure_date_overrides
@@ -98,20 +118,26 @@ class CustomerService:
         return candidate
 
     @staticmethod
-    def assign_identifiers(customer):
-        profile, _ = UserProfile.objects.get_or_create(pk=1)
-        
-        if not customer.sno or Customer.objects.filter(sno=customer.sno).exclude(pk=customer.pk).exists():
-            customer.sno = CustomerService.get_next_number("sno", profile.sno_format, exclude_pk=customer.pk)
-            
-        if not customer.ano or Customer.objects.filter(ano=customer.ano).exclude(pk=customer.pk).exists():
-            customer.ano = CustomerService.get_next_number("ano", profile.ano_format, exclude_pk=customer.pk)
-            
+    def assign_identifiers(customer, sequence_profile):
+        # S.No and A.No are server-owned. Never trust the read-only values sent
+        # by the form because its preview may have been loaded before settings
+        # changed or by a user whose profile does not own the shared formats.
+        customer.sno = CustomerService.get_next_number(
+            "sno", sequence_profile.sno_format, exclude_pk=customer.pk
+        )
+        customer.ano = CustomerService.get_next_number(
+            "ano", sequence_profile.ano_format, exclude_pk=customer.pk
+        )
+
         if customer.profile_id:
             customer.customer_id_no = customer.profile.customer_id_no
-        elif not customer.customer_id_no or Customer.objects.filter(customer_id_no=customer.customer_id_no).exclude(pk=customer.pk).exists():
-            customer.customer_id_no = CustomerService.get_next_number("customer_id_no", profile.customer_id_no_format, exclude_pk=customer.pk)
-            
+        else:
+            customer.customer_id_no = CustomerService.get_next_number(
+                "customer_id_no",
+                sequence_profile.customer_id_no_format,
+                exclude_pk=customer.pk,
+            )
+
         customer.save(update_fields=["sno", "ano", "customer_id_no", "updated_at"])
 
     @staticmethod
