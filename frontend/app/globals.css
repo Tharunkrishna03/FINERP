@@ -862,6 +862,24 @@ table tbody,
 table th,
 table td { border: 1px solid var(--color-border); }
 .data-table { width: 100%; min-width: 100%; border-collapse: collapse; border: none; }
+.collection-report-table { min-width: 760px; table-layout: fixed; }
+.collection-report-table th:nth-child(1),
+.collection-report-table td:nth-child(1) { width: 17%; }
+.collection-report-table th:nth-child(2),
+.collection-report-table td:nth-child(2) { width: 19%; }
+.collection-report-table th:nth-child(3),
+.collection-report-table td:nth-child(3) {
+  width: 38%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.collection-report-table th:nth-child(4),
+.collection-report-table td:nth-child(4) { width: 26%; }
+.collection-report-table .collection-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 /* Light, friendly header instead of a heavy dark one */
 .data-table thead th {
   text-align: left;

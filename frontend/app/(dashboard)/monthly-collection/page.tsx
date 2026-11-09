@@ -1,5 +1,5 @@
-import MonthlyCollection from "@/features/collections/components/MonthlyCollection";
+import CollectionPage from "@/features/collections/components/CollectionPage";
 
 export default function MonthlyCollectionPage() {
-  return <MonthlyCollection />;
+  return <CollectionPage initialView="monthly" />;
 }

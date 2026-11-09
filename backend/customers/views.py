@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -21,7 +21,7 @@ from .models import (
     UserAvatar,
     UserProfile,
     get_user_role,
-    set_user_role,
+    get_role_default_modules,
 )
 from .serializers import (
     CustomerSerializer,
@@ -42,10 +42,29 @@ def get_visible_modules(user):
     try:
         modules = user.module_access.visible_modules
     except UserModuleAccess.DoesNotExist:
-        return list(USER_MODULE_KEYS)
+        return get_role_default_modules(get_user_role(user))
 
     selected = set(modules if isinstance(modules, list) else [])
     return [module for module in USER_MODULE_KEYS if module in selected]
+
+
+class ModuleAccessPermission(BasePermission):
+    """Require the signed-in user to have access to the endpoint's module."""
+
+    message = "Your account does not have access to this module."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        module = getattr(view, "required_module", None)
+        if not module or user.is_superuser:
+            return True
+        try:
+            modules = user.module_access.visible_modules
+            return isinstance(modules, list) and module in modules
+        except UserModuleAccess.DoesNotExist:
+            return module in get_role_default_modules(get_user_role(user))
 
 
 def replace_user_avatar(user, uploaded_image):
@@ -68,6 +87,8 @@ def replace_user_avatar(user, uploaded_image):
     return avatar
 
 class CustomerListCreateView(generics.ListCreateAPIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     queryset = Customer.objects.prefetch_related(
         "installments", "payments", "transactions__jewel"
     )
@@ -104,6 +125,8 @@ class CustomerListCreateView(generics.ListCreateAPIView):
 
 
 class CustomerProfileListCreateView(generics.ListCreateAPIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     serializer_class = CustomerProfileSerializer
     queryset = CustomerProfile.objects.prefetch_related(
         "accounts", "accounts__transactions__jewel"
@@ -122,6 +145,8 @@ class CustomerProfileListCreateView(generics.ListCreateAPIView):
 
 
 class CustomerProfileRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     serializer_class = CustomerProfileSerializer
     queryset = CustomerProfile.objects.prefetch_related(
         "accounts", "accounts__transactions__jewel"
@@ -140,6 +165,8 @@ class CustomerProfileRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPI
         profile._prefetched_objects_cache = {}
 
 class CustomerRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     serializer_class = CustomerSerializer
 
     def get_queryset(self):
@@ -191,6 +218,8 @@ class CustomerRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CustomerTenureCallDoneAPIView(APIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     @transaction.atomic
     def post(self, request, customer_pk, *args, **kwargs):
         customer = get_object_or_404(
@@ -202,6 +231,8 @@ class CustomerTenureCallDoneAPIView(APIView):
         return Response({"id": customer.pk, "tenure_call_done": True})
 
 class PaymentCreateAPIView(APIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "customers"
     @transaction.atomic
     def post(self, request, customer_pk, *args, **kwargs):
         input_serializer = PaymentCreateSerializer(data=request.data)
@@ -290,6 +321,8 @@ class PaymentCreateAPIView(APIView):
 
 
 class CustomerTransactionListCreateView(APIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "transactions"
     parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request, customer_pk, *args, **kwargs):
@@ -324,6 +357,8 @@ class CustomerTransactionListCreateView(APIView):
 
 
 class CustomerTransactionDestroyView(generics.DestroyAPIView):
+    permission_classes = (ModuleAccessPermission,)
+    required_module = "transactions"
     queryset = CustomerTransaction.objects.all()
     serializer_class = CustomerTransactionSerializer
 
@@ -341,10 +376,9 @@ class UserProfileView(APIView):
         sequence_profile = CustomerService.get_identifier_profile(user)
         
         avatar = UserAvatar.objects.filter(user=user).first() if (user and user.is_authenticated) else None
-        user_name = (
-            user.first_name if (user and user.is_authenticated and user.first_name)
-            else (user.username if (user and user.is_authenticated) else profile.user_name)
-        )
+        user_name = profile.user_name.strip() if profile.user_name else ""
+        if not user_name or user_name == "John Doe":
+            user_name = user.username if (user and user.is_authenticated) else ""
         role = get_user_role(user)
         is_superuser = bool(user and user.is_authenticated and user.is_superuser)
         visible_modules = get_visible_modules(user) if (user and user.is_authenticated) else []
@@ -405,34 +439,34 @@ class UserProfileView(APIView):
                 )
             uploaded_image = image_serializer.validated_data["image"]
 
-        # 1. Update individual display name
+        # The profile display name stays separate from the immutable login username.
         new_name = request.data.get("user_name")
         if new_name is not None:
             new_name = str(new_name).strip()
-            if new_name:
-                user.first_name = new_name
-                user.save(update_fields=["first_name"])
-                if profile.user_name != new_name:
-                    profile.user_name = new_name
-                    profile.save(update_fields=["user_name"])
+            if not new_name:
+                return Response(
+                    {"user_name": "Full name cannot be empty."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            profile.user_name = new_name
+            profile.save(update_fields=["user_name"])
 
         # 2. Update individual avatar if passed in PUT
         if uploaded_image:
             avatar = replace_user_avatar(user, uploaded_image)
 
-        # 3. Role update (if provided)
-        role_val = request.data.get("role")
-        if role_val:
-            set_user_role(user, role_val)
-
-        # 4. System sequence formats (only admin can change these shared formats)
+        # System sequence formats are shared and only administrators can change them.
         if sequence_serializer is not None:
             sequence_serializer.save()
 
         avatar = UserAvatar.objects.filter(user=user).first()
         data = {
             "id": profile.id,
-            "user_name": user.first_name or user.username,
+            "user_name": (
+                profile.user_name
+                if profile.user_name and profile.user_name != "John Doe"
+                else user.username
+            ),
             "username": user.username,
             "role": get_user_role(user),
             "profile_image": avatar.image.url if (avatar and avatar.image) else None,
@@ -511,6 +545,8 @@ class CreateUserView(APIView):
         
         username_value = request.data.get("username", "")
         username = username_value.strip() if isinstance(username_value, str) else ""
+        user_name_value = request.data.get("user_name", "")
+        user_name = user_name_value.strip() if isinstance(user_name_value, str) else ""
         password = request.data.get("password", "")
         role_value = request.data.get("role", "Staff")
         role = role_value.strip() if isinstance(role_value, str) else "Staff"
@@ -523,10 +559,7 @@ class CreateUserView(APIView):
             return Response({"error": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         if visible_modules is None:
-            if role.lower() == "administrator":
-                selected_modules = list(USER_MODULE_KEYS)
-            else:
-                selected_modules = ["dashboard", "customers", "transactions", "collections"]
+            selected_modules = get_role_default_modules(role)
         elif not isinstance(visible_modules, list):
             return Response(
                 {"error": "Select the modules this user can see"},
@@ -574,11 +607,16 @@ class CreateUserView(APIView):
                 visible_modules=selected_modules,
                 role=role,
             )
+            UserProfile.objects.create(
+                user=user,
+                user_name=user_name or username,
+            )
         return Response(
             {
                 "message": f"User '{user.username}' created successfully",
                 "id": user.id,
                 "username": user.username,
+                "user_name": user_name or username,
                 "role": role,
                 "visible_modules": selected_modules,
             },
@@ -591,12 +629,14 @@ class ListUsersView(APIView):
         if not request.user.is_superuser:
             return Response({"error": "Only admin can view users"}, status=status.HTTP_403_FORBIDDEN)
         
-        access_by_user = dict(
-            UserModuleAccess.objects.values_list("user_id", "visible_modules")
-        )
-        role_by_user = dict(
-            UserModuleAccess.objects.values_list("user_id", "role")
-        )
+        access_by_user = {
+            access.user_id: access
+            for access in UserModuleAccess.objects.select_related("user").all()
+        }
+        profiles_by_user = {
+            profile.user_id: profile.user_name
+            for profile in UserProfile.objects.all()
+        }
         avatars_by_user = {
             a.user_id: a.image.url
             for a in UserAvatar.objects.filter(image__isnull=False)
@@ -607,7 +647,12 @@ class ListUsersView(APIView):
             {
                 "id": user.id,
                 "username": user.username,
-                "role": "Administrator" if user.is_superuser else role_by_user.get(user.id, "Staff"),
+                "user_name": (
+                    profiles_by_user.get(user.id)
+                    if profiles_by_user.get(user.id) not in {None, "", "John Doe"}
+                    else user.username
+                ),
+                "role": get_user_role(user),
                 "is_superuser": user.is_superuser,
                 "is_active": user.is_active,
                 "date_joined": user.date_joined,
@@ -618,7 +663,11 @@ class ListUsersView(APIView):
                     else [
                         module
                         for module in USER_MODULE_KEYS
-                        if module in access_by_user.get(user.id, USER_MODULE_KEYS)
+                        if module in (
+                            access_by_user[user.id].visible_modules
+                            if user.id in access_by_user
+                            else get_role_default_modules(get_user_role(user))
+                        )
                     ]
                 ),
             }

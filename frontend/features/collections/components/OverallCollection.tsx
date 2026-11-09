@@ -16,7 +16,7 @@ interface CollectionItem {
   amount: number;
 }
 
-export default function OverallCollection() {
+export default function OverallCollection({ embedded = false }: { embedded?: boolean }) {
   const [collections, setCollections] = useState<CollectionItem[]>([]);
   const [isFetching, setIsFetching] = useState(true);
 
@@ -79,7 +79,7 @@ export default function OverallCollection() {
   return (
     <div>
       {isFetching && <Loader />}
-      <div className="page-header">
+      {!embedded && <div className="page-header">
         <div>
           <h1 className="text-blue-600 font-normal text-base" style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px", fontWeight: "normal", fontSize: "16px", color: "#2563eb" }}>
             <Link href="/dashboard" className="breadcrumb-link" style={{ textDecoration: "none", color: "inherit" }}>Dashboard</Link>
@@ -87,7 +87,7 @@ export default function OverallCollection() {
             <span className="breadcrumb-active" style={{ color: "inherit" }}>Overall Collection</span>
           </h1>
         </div>
-      </div>
+      </div>}
 
       <div className="card hover:shadow-lg transition-all duration-300" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "20px 24px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--color-border)" }}>
@@ -113,13 +113,13 @@ export default function OverallCollection() {
         </div>
         
         <div className="table-scroll" style={{ margin: 0 }}>
-          <Table className="data-table" style={{ margin: 0 }}>
+          <Table className="data-table collection-report-table" style={{ margin: 0 }}>
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Customer ID</th>
                 <th>Customer Name</th>
-                <th>Total Collected (Rs.)</th>
+                <th className="collection-amount">Total Collected (Rs.)</th>
               </tr>
             </thead>
             <tbody>
@@ -137,7 +137,7 @@ export default function OverallCollection() {
                     <td style={{ fontWeight: 500 }}>{c.date}</td>
                     <td>{c.customer_id_no}</td>
                     <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
-                    <td style={{ fontWeight: 600, color: "#059669" }}>
+                    <td className="collection-amount" style={{ fontWeight: 600, color: "#059669" }}>
                       Rs. {c.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>

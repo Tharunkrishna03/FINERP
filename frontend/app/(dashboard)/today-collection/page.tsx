@@ -1,5 +1,5 @@
-import TodayCollection from "@/features/collections/components/TodayCollection";
+import CollectionPage from "@/features/collections/components/CollectionPage";
 
 export default function TodayCollectionPage() {
-  return <TodayCollection />;
+  return <CollectionPage initialView="today" />;
 }

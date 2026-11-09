@@ -142,7 +142,14 @@ class Role(models.Model):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    id = models.BigAutoField(primary_key=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+        null=True,
+        blank=True,
+    )
     user_name = models.CharField(max_length=255, default="John Doe")
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='profiles')
     profile_image = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
@@ -190,6 +197,12 @@ def get_user_role(user):
     if getattr(user, "is_superuser", False):
         return "Administrator"
     try:
+        access = getattr(user, "module_access", None)
+        if access and access.role:
+            return access.role
+    except UserModuleAccess.DoesNotExist:
+        pass
+    try:
         profile = getattr(user, "profile", None)
         if profile and profile.role:
             return profile.role.name
@@ -206,8 +219,16 @@ def set_user_role(user, role_name):
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.role = role_obj
     profile.save(update_fields=["role"])
-    if role_str.lower() == "administrator":
-        if not user.is_staff:
-            user.is_staff = True
-            user.save(update_fields=["is_staff"])
+    access, _ = UserModuleAccess.objects.get_or_create(user=user)
+    access.role = role_str
+    access.save(update_fields=["role"])
+
+
+def get_role_default_modules(role_name):
+    role = str(role_name or "Staff").strip().lower()
+    if role in {"administrator", "admin"}:
+        return list(USER_MODULE_KEYS)
+    if role == "manager":
+        return ["dashboard", "customers", "transactions", "collections"]
+    return ["dashboard", "customers", "transactions"]
 

@@ -19,7 +19,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const [customerOpen, setCustomerOpen] = useState(() => pathname.startsWith("/customer-list") || pathname.startsWith("/add-customer") || pathname.startsWith("/add-account"));
-  const [collectionOpen, setCollectionOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
@@ -55,15 +54,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [profileData, setProfileData] = useState<{
     user_name: string;
+    username: string;
     role: string;
     profile_image: string | null;
     visible_modules: AppModuleKey[];
   }>({
     user_name: "",
+    username: "",
     role: "",
     profile_image: null,
     visible_modules: [],
   });
+  const headerName = profileData.user_name.trim();
+  const headerUsername = profileData.username.trim();
+  const showHeaderUsername = Boolean(
+    headerUsername && headerUsername.toLowerCase() !== headerName.toLowerCase(),
+  );
 
   const filteredRoutes = searchableRoutes.filter(route =>
     profileData.visible_modules.includes(route.module) &&
@@ -78,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const data = await res.json();
           setProfileData({
             user_name: data.user_name || "",
+            username: data.username || "",
             role: data.role || "",
             profile_image: data.profile_image || null,
             visible_modules: normalizeVisibleModules(data.visible_modules),
@@ -85,14 +92,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } else {
           setProfileData((current) => ({
             ...current,
-            visible_modules: normalizeVisibleModules(null),
+            visible_modules: [],
           }));
         }
       } catch (err) {
         console.error("Failed to fetch global profile", err instanceof Error ? err.message : String(err));
         setProfileData((current) => ({
           ...current,
-          visible_modules: normalizeVisibleModules(null),
+          visible_modules: [],
         }));
       } finally {
         setProfileLoaded(true);
@@ -179,20 +186,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Transaction
           </Link>}
 
-          {profileData.visible_modules.includes("collections") && <div className={`nav-group ${collectionOpen ? 'is-open' : ''}`}>
-            <div className="nav-item" onClick={() => setCollectionOpen(!collectionOpen)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                Collection
-              </div>
-              <svg className="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </div>
-            <div className="nav-submenu">
-              <Link href="/today-collection" onClick={() => setSidebarOpen(false)} className={`nav-item ${pathname === '/today-collection' ? 'active' : ''}`}>Today Collection</Link>
-              <Link href="/monthly-collection" onClick={() => setSidebarOpen(false)} className={`nav-item ${pathname === '/monthly-collection' ? 'active' : ''}`}>Monthly Collection</Link>
-              <Link href="/overall-collection" onClick={() => setSidebarOpen(false)} className={`nav-item ${pathname === '/overall-collection' ? 'active' : ''}`}>Overall Collection</Link>
-            </div>
-          </div>}
+          {profileData.visible_modules.includes("collections") && (
+            <Link
+              href="/today-collection"
+              onClick={() => setSidebarOpen(false)}
+              className={`nav-item ${["/today-collection", "/monthly-collection", "/overall-collection"].includes(pathname) ? "active" : ""}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+              Collection
+            </Link>
+          )}
         </nav>
       </aside>
 
@@ -250,8 +253,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               </div>
               <div className="profile-meta">
-                <span className="name">{profileData.user_name || "Profile"}</span>
-                <span className="role">{profileData.role || "User"}</span>
+                <span className="name">{headerName || headerUsername || "Profile"}</span>
+                <span className="role">
+                  {showHeaderUsername ? `@${headerUsername} · ` : ""}{profileData.role || "User"}
+                </span>
               </div>
             </div>
             

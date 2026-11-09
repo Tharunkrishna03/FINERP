@@ -11,6 +11,7 @@ import { APP_MODULES, type AppModuleKey, getModuleLabel } from "@/services/modul
 interface AppUser {
   id: number;
   username: string;
+  user_name?: string;
   role?: string;
   is_superuser: boolean;
   is_active: boolean;
@@ -56,7 +57,7 @@ const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 export default function Settings() {
   const [username, setUsername] = useState("");
   const [userName, setUserName] = useState("");
-  const [role, setRole] = useState("Administrator");
+  const [role, setRole] = useState("User");
   const [snoFormat, setSnoFormat] = useState("1");
   const [anoFormat, setAnoFormat] = useState("1");
   const [customerIdNoFormat, setCustomerIdNoFormat] = useState("1");
@@ -77,6 +78,7 @@ export default function Settings() {
 
   // User Management State
   const [newUsername, setNewUsername] = useState("");
+  const [newUserName, setNewUserName] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState("Staff");
   const [newUserModules, setNewUserModules] = useState<AppModuleKey[]>([
@@ -134,7 +136,7 @@ export default function Settings() {
               ? data.user_name
               : loginUsername,
           );
-          setRole(data.role || "Administrator");
+          setRole(data.role || "Staff");
           setSnoFormat(data.sno_format || "1");
           setAnoFormat(data.ano_format || "1");
           setCustomerIdNoFormat(data.customer_id_no_format || "1");
@@ -193,6 +195,7 @@ export default function Settings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: newUsername.trim(),
+          user_name: newUserName.trim(),
           password: newUserPassword,
           role: newUserRole,
           visible_modules: newUserModules,
@@ -203,6 +206,7 @@ export default function Settings() {
       if (response.ok) {
         toast.success(data.message || "User created successfully!");
         setNewUsername("");
+        setNewUserName("");
         setNewUserPassword("");
         setNewUserRole("Staff");
         setNewUserModules(["dashboard", "customers", "transactions"]);
@@ -258,7 +262,6 @@ export default function Settings() {
     try {
       const formData = new FormData();
       formData.append("user_name", userName);
-      formData.append("role", role);
       if (photo) formData.append("profile_image", photo);
       if (isSuperuser) {
         formData.append("sno_format", snoFormat);
@@ -484,7 +487,7 @@ export default function Settings() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#0f172a" }}>Profile Information</h3>
-              <span style={{ fontSize: 13, color: "#64748b" }}>Update your display photo, account identity, and role assignment.</span>
+              <span style={{ fontSize: 13, color: "#64748b" }}>Update your profile name and display photo. Your login username and assigned role stay separate.</span>
             </div>
           </div>
 
@@ -551,7 +554,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Name & Role Fields */}
+            {/* Login Username, Profile Name, and Assigned Role */}
             <div className="settings-form-row settings-form-row--three">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" htmlFor="profile-username">Username</label>
@@ -579,21 +582,9 @@ export default function Settings() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Role</label>
                 <div className="input-wrap">
-                  <select
-                    className="input"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    disabled={!isSuperuser}
-                    title={!isSuperuser ? "Role is assigned by Administrator" : undefined}
-                  >
-                    <option value="Administrator">Administrator</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Staff">Staff</option>
-                  </select>
+                  <input className="input" value={role} readOnly aria-readonly="true" />
                 </div>
-                {!isSuperuser && (
-                  <span className="form-hint" style={{ fontSize: 11, color: "#64748b" }}>Role is managed by system administrators.</span>
-                )}
+                <span className="form-hint" style={{ fontSize: 11, color: "#64748b" }}>Role and module access are assigned by an administrator.</span>
               </div>
             </div>
 
@@ -760,7 +751,7 @@ export default function Settings() {
               <h4 style={{ margin: "0 0 12px 0", fontSize: 15, fontWeight: 600, color: "#1e293b" }}>Create New User Account</h4>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div className="settings-form-row settings-form-row--three">
+                <div className="settings-form-row settings-form-row--two">
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                     <label className="form-label">Username</label>
                     <div className="input-wrap">
@@ -773,6 +764,22 @@ export default function Settings() {
                       />
                     </div>
                   </div>
+
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="form-label">Full Name</label>
+                    <div className="input-wrap">
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Enter full name (optional)"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="settings-form-row settings-form-row--two">
 
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                     <label className="form-label">Password</label>
@@ -888,7 +895,7 @@ export default function Settings() {
                                     {(user.username.charAt(0) || "U").toUpperCase()}
                                   </div>
                                 )}
-                                <span>{user.username}</span>
+                                <span>{user.user_name || user.username} (@{user.username})</span>
                                 {user.is_superuser && (
                                   <span
                                     style={{

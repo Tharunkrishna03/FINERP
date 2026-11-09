@@ -1,5 +1,5 @@
-import OverallCollection from "@/features/collections/components/OverallCollection";
+import CollectionPage from "@/features/collections/components/CollectionPage";
 
 export default function OverallCollectionPage() {
-  return <OverallCollection />;
+  return <CollectionPage initialView="overall" />;
 }
