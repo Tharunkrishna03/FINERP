@@ -1,5 +1,10 @@
+import logging
+
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 def health_check(request):
@@ -8,6 +13,7 @@ def health_check(request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
     except DatabaseError:
+        logger.exception("Database health check failed")
         return JsonResponse({"status": "unavailable"}, status=503)
 
     response = JsonResponse({"status": "ok"})
