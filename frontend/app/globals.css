@@ -20,8 +20,7 @@
    ========================================================================== */
 :root {
   /* Fonts */
-  --font-sans: "Poppins", sans-serif;
-  --font-display: "Poppins", sans-serif;
+  --font-display: var(--font-sans);
 
   /* Brand — vibrant indigo */
   --color-primary: #4F46E5;          /* primary actions */
