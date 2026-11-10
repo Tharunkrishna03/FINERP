@@ -140,7 +140,21 @@ export default function LoginForm() {
     <div className="login-page">
       {/* Left Partition - Brand and Gold Loan Illustration */}
       <div className="login-brand-panel">
-        <div className="login-brand-logo">
+        <div
+          className="login-brand-logo"
+          onPointerMove={(event) => {
+            if (event.pointerType !== "mouse") return;
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+            const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+            event.currentTarget.style.setProperty("--logo-rotate-x", `${-y * 12}deg`);
+            event.currentTarget.style.setProperty("--logo-rotate-y", `${x * 12}deg`);
+          }}
+          onPointerLeave={(event) => {
+            event.currentTarget.style.setProperty("--logo-rotate-x", "0deg");
+            event.currentTarget.style.setProperty("--logo-rotate-y", "0deg");
+          }}
+        >
           <img src="/logo.png" alt="TK Infotechsoft" />
         </div>
         <div className="login-illustration-wrap">
